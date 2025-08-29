@@ -1,10 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchAllQueues, createQueue, removePlayer, fetchPlayers } from '../services/api';
+import { fetchAllQueues, createQueue, removePlayer, fetchPlayers, startTimedQueue, getQueueStatus, processNext, confirmTurn, handleMissed, type Player, type SimulatorQueue } from '../services/api';
 import './Queue.css';
 
-type Player = { id: number; name: string };
-type QueueItem = { id: number; Player: Player };
-type SimulatorQueue = { simulatorId: number; simulatorName: string; queue: QueueItem[] };
+type QueueStatus = { isActive: boolean; currentPlayer?: { id: number; name: string }; timeRemaining?: number };
 
 export default function Queue() {
   const [allQueues, setAllQueues] = useState<SimulatorQueue[]>([]);
@@ -12,13 +10,25 @@ export default function Queue() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [queueStatuses, setQueueStatuses] = useState<Record<number, QueueStatus>>({});
 
-  // Carrega todas as filas da API
   const loadAllQueues = useCallback(async () => {
     try {
       setError(null);
       const queues = await fetchAllQueues();
       setAllQueues(queues || []);
+      
+      const statuses: Record<number, QueueStatus> = {};
+      for (const queue of queues || []) {
+        try {
+          const status = await getQueueStatus(queue.simulatorId);
+          statuses[queue.simulatorId] = status.data;
+        } catch {
+          // Silently handle missing timed queue endpoints
+          statuses[queue.simulatorId] = { isActive: false };
+        }
+      }
+      setQueueStatuses(statuses);
     } catch (err) {
       setError('Erro ao carregar filas. Por favor, tente novamente.');
       console.error('Error loading queues:', err);
@@ -26,7 +36,6 @@ export default function Queue() {
     }
   }, []);
 
-  // Carrega lista de jogadores
   const loadPlayers = useCallback(async () => {
     try {
       const playersList = await fetchPlayers();
@@ -38,7 +47,6 @@ export default function Queue() {
     }
   }, []);
 
-  // Carrega dados iniciais
   useEffect(() => {
     const loadInitialData = async () => {
       setLoading(true);
@@ -54,9 +62,8 @@ export default function Queue() {
     loadInitialData();
     const interval = setInterval(loadAllQueues, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadAllQueues, loadPlayers]);
 
-  // Adiciona jogador na fila de um simulador específico
   const handleAdd = async (simulatorId: number) => {
     if (selectedPlayerId === null) return;
     const selectedPlayer = players.find(p => p.id === selectedPlayerId);
@@ -66,10 +73,9 @@ export default function Queue() {
       const result = await createQueue(selectedPlayerId, simulatorId);
       setSelectedPlayerId(null);
       
-      // Optimistic update
       setAllQueues(prev => prev.map(sim => 
         sim.simulatorId === simulatorId 
-          ? { ...sim, queue: [...sim.queue, { id: result.id || Date.now(), Player: selectedPlayer }] }
+          ? { ...sim, queue: [...sim.queue, { id: result.id || Date.now(), player: selectedPlayer }] }
           : sim
       ));
     } catch (err) {
@@ -78,12 +84,10 @@ export default function Queue() {
     }
   };
 
-  // Remove jogador da fila
   const handleRemove = async (id: number) => {
     try {
       await removePlayer(id);
       
-      // Optimistic update
       setAllQueues(prev => prev.map(sim => ({
         ...sim,
         queue: sim.queue.filter(q => q.id !== id)
@@ -91,6 +95,46 @@ export default function Queue() {
     } catch (err) {
       setError('Erro ao remover jogador da fila. Por favor, tente novamente.');
       console.error('Error removing player from queue:', err);
+    }
+  };
+
+  const handleStartTimed = async (simulatorId: number) => {
+    try {
+      await startTimedQueue(simulatorId);
+      await loadAllQueues();
+    } catch (err) {
+      setError('Funcionalidade de fila temporizada não disponível no servidor.');
+      console.error('Error starting timed queue:', err);
+    }
+  };
+
+  const handleProcessNext = async (simulatorId: number) => {
+    try {
+      await processNext(simulatorId);
+      await loadAllQueues();
+    } catch (err) {
+      setError('Erro ao processar próximo jogador.');
+      console.error('Error processing next:', err);
+    }
+  };
+
+  const handleConfirmTurn = async (queueId: number) => {
+    try {
+      await confirmTurn(queueId);
+      await loadAllQueues();
+    } catch (err) {
+      setError('Erro ao confirmar turno.');
+      console.error('Error confirming turn:', err);
+    }
+  };
+
+  const handleMissedTurn = async (queueId: number) => {
+    try {
+      await handleMissed(queueId);
+      await loadAllQueues();
+    } catch (err) {
+      setError('Erro ao processar turno perdido.');
+      console.error('Error handling missed turn:', err);
     }
   };
 
@@ -128,37 +172,82 @@ export default function Queue() {
       </div>
 
       <div className="queues-grid">
-        {allQueues.map(sim => (
-          <div key={sim.simulatorId} className="queue-card">
-            <h3>{sim.simulatorName}</h3>
-            <button
-              onClick={() => handleAdd(sim.simulatorId)}
-              disabled={selectedPlayerId === null}
-              className="add-button"
-            >
-              Adicionar à Fila
-            </button>
-            <ul className="queue-list">
-              {(sim.queue || []).map(q => (
-                <li key={q.id} className="queue-item">
-                  <span>{q.Player?.name ?? "Sem nome"}</span>
-                  <button
-                    onClick={() => handleRemove(q.id)}
-                    className="remove-button"
-                  >
-                    Remover
-                  </button>
-                </li>
-              ))}
-              {(!sim.queue || sim.queue.length === 0) && (
-                <li className="empty-queue">Fila vazia</li>
+        {allQueues.map(sim => {
+          const status = queueStatuses[sim.simulatorId];
+          return (
+            <div key={sim.simulatorId} className="queue-card">
+              <h3>{sim.simulatorName}</h3>
+              
+              {status?.isActive && (
+                <div className="timed-status">
+                  <p>Jogador atual: {status.currentPlayer?.name}</p>
+                  {status.timeRemaining && <p>Tempo restante: {status.timeRemaining}s</p>}
+                </div>
               )}
-            </ul>
-          </div>
-        ))}
-        {allQueues.length === 0 && (
-          <p className="no-simulators">Nenhum simulador disponível</p>
-        )}
+              
+              <div className="queue-controls">
+                <button
+                  onClick={() => handleAdd(sim.simulatorId)}
+                  disabled={selectedPlayerId === null}
+                  className="add-button"
+                >
+                  Adicionar à Fila
+                </button>
+                
+                <button
+                  onClick={() => handleStartTimed(sim.simulatorId)}
+                  disabled={status?.isActive}
+                  className="timed-button"
+                >
+                  Iniciar Fila Temporizada
+                </button>
+                
+                <button
+                  onClick={() => handleProcessNext(sim.simulatorId)}
+                  disabled={!status?.isActive}
+                  className="next-button"
+                >
+                  Próximo Jogador
+                </button>
+              </div>
+              
+              <ul className="queue-list">
+                {(sim.queue || []).map(q => (
+                  <li key={q.id} className="queue-item">
+                    <span>{q.player?.name ?? "Sem nome"}</span>
+                    <div className="item-controls">
+                      <button
+                        onClick={() => handleRemove(q.id)}
+                        className="remove-button"
+                      >
+                        Remover
+                      </button>
+                      {status?.isActive && status.currentPlayer?.name === q.player?.name && (
+                        <>
+                          <button
+                            onClick={() => handleConfirmTurn(q.id)}
+                            className="confirm-button"
+                          >
+                            Confirmar
+                          </button>
+                          <button
+                            onClick={() => handleMissedTurn(q.id)}
+                            className="missed-button"
+                          >
+                            Perdeu Turno
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                ))}
+                {(!sim.queue || sim.queue.length === 0) && (
+                  <li className="empty-queue">Fila vazia</li>
+                )}
+              </ul>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

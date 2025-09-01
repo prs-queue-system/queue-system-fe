@@ -1,22 +1,20 @@
-// src/App.tsx
-import Player from "./components/Player";
-import Queue from "./components/Queue";
-import Simulators from "./components/Simulators";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Admin from './pages/Admin';
+import Register from './pages/Register';
 import "./App.css";
 
 export default function App() {
   return (
-    <div className="app-container">
-      <h1 className="app-title">Sistema de Filas e Simuladores</h1>
-      <div className="section">
-        <Player />
-      </div>
-      <div className="section">
-        <Queue />
-      </div>
-      <div className="section">
-        <Simulators />
-      </div>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/register" replace />} />
+        <Route path="/admin" element={
+          <div className="app-container">
+            <Admin />
+          </div>
+        } />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </Router>
   );
 }

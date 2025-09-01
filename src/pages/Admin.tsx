@@ -1,8 +1,34 @@
+import { useEffect, useState } from 'react';
 import Player from "../components/Player";
 import Queue from "../components/Queue";
 import Simulators from "../components/Simulators";
+import UserManagement from "../components/UserManagement";
 
 export default function Admin() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      if (!['MASTER', 'ADMIN'].includes(parsedUser.role)) {
+        window.location.href = '/login';
+        return;
+      }
+      setUser(parsedUser);
+    } else {
+      window.location.href = '/login';
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  };
+
+  if (!user) return <div>Carregando...</div>;
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
@@ -15,8 +41,31 @@ export default function Admin() {
           justifyContent: 'center',
         }}>
         </div>
-        <h1 className="app-title" style={{ margin: 0 }}>Sistema de Filas e Simuladores - Admin</h1>
+        <h1 className="app-title" style={{ margin: 0, flex: 1 }}>Sistema de Filas e Simuladores - {user.role}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <span style={{ color: 'white' }}>Olá, {user.name}</span>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#dc2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Sair
+          </button>
+        </div>
       </div>
+      
+      {['MASTER', 'ADMIN'].includes(user.role) && (
+        <div className="section">
+          <UserManagement userRole={user.role} />
+        </div>
+      )}
+      
       <div className="section">
         <Player />
       </div>

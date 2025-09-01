@@ -42,6 +42,8 @@ export default function Player(){
 
     useEffect(() => {
         loadPlayers();
+        const interval = setInterval(loadPlayers, 5000); // Reload players every 5 seconds
+        return () => clearInterval(interval);
     }, [loadPlayers]);
 
     const filteredPlayers = useMemo(() => {

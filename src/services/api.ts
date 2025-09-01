@@ -31,7 +31,10 @@ export async function fetchPlayers(): Promise<Player[]> {
 export async function createPlayer(name: string, email: string): Promise<Player> {
   const res = await fetch("http://localhost:3000/players", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      ...getAuthHeaders()
+    },
     body: JSON.stringify({ name, email }),
   });
   
@@ -150,4 +153,57 @@ export async function handleMissed(queueId: number) {
   const res = await fetch(`http://localhost:3000/timed-queue/${queueId}/missed`, { method: "POST" });
   if (!res.ok) throw new Error("Erro ao processar turno perdido");
   return res.json();
+}
+
+// Auth API
+export async function login(email: string, password: string) {
+  const res = await fetch("http://localhost:3000/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Erro ao fazer login");
+  }
+  
+  return res.json();
+}
+
+export async function register(name: string, email: string, password: string, role?: string, sellerId?: number) {
+  const res = await fetch("http://localhost:3000/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, password, role, sellerId }),
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Erro ao registrar usuário");
+  }
+  
+  return res.json();
+}
+
+export async function getProfile() {
+  const token = localStorage.getItem('authToken');
+  const res = await fetch("http://localhost:3000/auth/profile", {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  
+  if (!res.ok) throw new Error("Erro ao buscar perfil");
+  return res.json();
+}
+
+export async function getSellers() {
+  const res = await fetch("http://localhost:3000/auth/sellers");
+  if (!res.ok) throw new Error("Erro ao buscar vendedores");
+  return res.json();
+}
+
+// Helper to add auth token to requests
+function getAuthHeaders() {
+  const token = localStorage.getItem('authToken');
+  return token ? { "Authorization": `Bearer ${token}` } : {};
 }

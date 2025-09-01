@@ -28,18 +28,26 @@ export async function fetchPlayers(): Promise<Player[]> {
   }
 }
 
-export async function createPlayer(name: string): Promise<Player> {
-  try {
-    const res = await fetch("http://localhost:3000/players", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    if (!res.ok) throw new Error("Erro ao criar jogador");
-    return res.json();
-  } catch {
-    throw new Error("Erro ao criar jogador");
+export async function createPlayer(name: string, email: string): Promise<Player> {
+  const res = await fetch("http://localhost:3000/players", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email }),
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Erro ao criar jogador");
   }
+  
+  return res.json();
+}
+
+export async function checkEmailExists(email: string): Promise<boolean> {
+  const res = await fetch(`http://localhost:3000/players?email=${encodeURIComponent(email)}`);
+  if (!res.ok) return false;
+  const players = await res.json();
+  return players.some((player: any) => player.email === email);
 }
 
 // Simulator API

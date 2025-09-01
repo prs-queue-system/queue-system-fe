@@ -1,0 +1,331 @@
+.seller-container {
+  min-height: 100vh;
+  background: #000;
+  padding: 2rem;
+  color: white;
+}
+
+.seller-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.logo-placeholder {
+  width: 60px;
+  height: 60px;
+  background: #333;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 0.8rem;
+  border: 2px dashed #555;
+}
+
+.seller-header h1 {
+  margin: 0;
+  color: white;
+}
+
+.search-section {
+  margin-bottom: 3rem;
+}
+
+.search-section h2 {
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 500px;
+  padding: 1rem;
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: white;
+  font-size: 1rem;
+  margin-bottom: 2rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #dc2626;
+}
+
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.player-card {
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.player-info h3 {
+  margin: 0 0 0.5rem 0;
+  color: white;
+}
+
+.player-info p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.select-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.3s ease;
+}
+
+.select-button:not(.selected) {
+  background: #dc2626;
+  color: white;
+}
+
+.select-button:not(.selected):hover {
+  background: #b91c1c;
+}
+
+.select-button.selected {
+  background: #4caf50;
+  color: white;
+}
+
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 2rem;
+}
+
+.selected-player {
+  background: #1a4d1a;
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.selected-player h3 {
+  margin: 0;
+  color: #4caf50;
+}
+
+.queues-section h2 {
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.queues-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+}
+
+.queue-card {
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 2rem;
+  background: #1a1a1a;
+  transition: border-color 0.3s ease;
+}
+
+.queue-card:hover {
+  border-color: #dc2626;
+}
+
+.queue-card h3 {
+  margin: 0 0 1.5rem 0;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.timed-status {
+  background: #333;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #dc2626;
+}
+
+.timed-status p {
+  margin: 0;
+  font-size: 1rem;
+  color: white;
+}
+
+.queue-controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.queue-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.queue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #333;
+  color: white;
+}
+
+.queue-item:last-child {
+  border-bottom: none;
+}
+
+.empty-queue {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+  font-style: italic;
+}
+
+.item-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-button {
+  flex: 1;
+  padding: 1rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+
+.add-button:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+.add-button:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.timed-button {
+  flex: 1;
+  padding: 0.75rem;
+  background: #333;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease;
+}
+
+.timed-button:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+.timed-button:hover:not(:disabled) {
+  background: #555;
+}
+
+.next-button {
+  flex: 1;
+  padding: 0.75rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease;
+}
+
+.next-button:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+.next-button:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.remove-button {
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.remove-button:hover {
+  background: #b91c1c;
+}
+
+.confirm-button {
+  background: #333;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s ease;
+}
+
+.confirm-button:hover {
+  background: #555;
+}
+
+.missed-button {
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s ease;
+}
+
+.missed-button:hover {
+  background: #b91c1c;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #000;
+  color: white;
+  font-size: 1.2rem;
+}

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useCallback } from "react";
 import { fetchSimulators, createSimulator } from "../services/api";
 

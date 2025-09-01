@@ -1,15 +1,15 @@
 #root {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 1rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .app-container {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000;
   min-height: 100vh;
   padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .app-title {
@@ -21,30 +21,29 @@
 }
 
 .section {
-  background: rgba(255, 255, 255, 0.95);
-  margin: 1.5rem 0;
+  background: #1a1a1a;
+  margin: 2rem 0;
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  border: 1px solid #333;
 }
 
 .section h2 {
-  color: #333;
-  border-bottom: 3px solid #667eea;
+  color: white;
+  border-bottom: 3px solid #dc2626;
   padding-bottom: 0.5rem;
   margin-bottom: 1.5rem;
 }
 
 .section {
-  color: #333;
+  color: white;
 }
 
 .section ul {
-  color: #333;
+  color: white;
 }
 
 .section li {
-  color: #333;
+  color: white;
   margin: 0.5rem 0;
 }

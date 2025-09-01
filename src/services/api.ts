@@ -29,11 +29,12 @@ export async function fetchPlayers(): Promise<Player[]> {
 }
 
 export async function createPlayer(name: string, email: string): Promise<Player> {
+  const token = localStorage.getItem('authToken');
   const res = await fetch("http://localhost:3000/players", {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
-      ...getAuthHeaders()
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
     },
     body: JSON.stringify({ name, email }),
   });
@@ -202,8 +203,3 @@ export async function getSellers() {
   return res.json();
 }
 
-// Helper to add auth token to requests
-function getAuthHeaders() {
-  const token = localStorage.getItem('authToken');
-  return token ? { "Authorization": `Bearer ${token}` } : {};
-}

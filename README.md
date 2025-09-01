@@ -1,69 +1,125 @@
-# React + TypeScript + Vite
+# Queue Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern React-based queue management system for simulators with real-time updates and timed queue functionality.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Player Registration**: Simple registration form for new players
+- **Queue Management**: Add/remove players from simulator queues
+- **Timed Queues**: Automatic queue progression with configurable time limits
+- **Real-time Updates**: Live queue status and player positions
+- **Admin Panel**: Complete management interface for queues, players, and simulators
+- **Modern UI**: Dark theme with red accents, optimized for desktop
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Frontend**: React 19 + TypeScript + Vite
+- **Routing**: React Router DOM
+- **Styling**: CSS3 with modern design patterns
+- **API**: RESTful backend integration
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Project Structure
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── components/          # Reusable UI components
+│   ├── Player.tsx      # Player management
+│   ├── Queue.tsx       # Queue display and controls
+│   ├── Queue.css       # Queue styling
+│   └── Simulators.tsx  # Simulator management
+├── pages/              # Route-level pages
+│   ├── Admin.tsx       # Admin dashboard
+│   ├── Register.tsx    # Player registration
+│   └── Register.css    # Registration styling
+├── services/           # API integration
+│   └── api.ts         # Backend API calls
+└── App.tsx            # Main app with routing
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Routes
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `/` - Redirects to registration
+- `/register` - Player registration form
+- `/admin` - Admin dashboard with full queue management
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Backend API server running on `http://localhost:3000`
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd my-queue-app
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
 ```
+
+### Backend API Requirements
+
+The frontend expects a REST API with the following endpoints:
+
+- `GET /players` - List all players
+- `POST /players` - Create new player
+- `GET /simulators` - List all simulators
+- `POST /simulators` - Create new simulator
+- `GET /queue/:simulatorId` - Get queue for simulator
+- `POST /queue` - Add player to queue
+- `DELETE /queue/:id` - Remove player from queue
+- `POST /timed-queue/:simulatorId/start` - Start timed queue
+- `GET /timed-queue/:simulatorId/status` - Get queue status
+- `POST /timed-queue/:simulatorId/next` - Process next player
+- `POST /timed-queue/:id/confirm` - Confirm player turn
+- `POST /timed-queue/:id/missed` - Handle missed turn
+
+## Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+
+## Features in Detail
+
+### Player Registration
+- Simple form with name (required) and optional contact fields
+- Success feedback and form validation
+- Automatic redirect after registration
+
+### Queue Management
+- Real-time queue display with player positions
+- Add/remove players from queues
+- Visual indicators for active players
+- Time remaining display for active sessions
+
+### Timed Queues
+- Configurable time limits per session
+- Automatic progression to next player
+- Confirm/missed turn handling
+- Live countdown display
+
+### Admin Dashboard
+- Complete system overview
+- Player, queue, and simulator management
+- Real-time status updates every 3 seconds
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details

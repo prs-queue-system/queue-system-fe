@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useCallback } from "react";
-import { fetchSimulators, createSimulator } from "../services/api";
+import { fetchSimulators, createSimulator, deleteSimulator } from "../services/api";
 
 type Simulator = {
   id: number;
@@ -32,6 +32,15 @@ export default function Simulators() {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteSimulator(id);
+      loadSimulators();
+    } catch (error) {
+      console.error('Error deleting simulator:', error);
+    }
+  };
+
   useEffect(() => {
     loadSimulators();
     const interval = setInterval(loadSimulators, 5000);
@@ -55,8 +64,14 @@ export default function Simulators() {
 
       <ul>
         {simulators.map(s => (
-          <li key={s.id}>
-            {s.id} - {s.name} - {s.active ? "Ativo" : "Inativo"}
+          <li key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
+            <span>{s.id} - {s.name} - {s.active ? "Ativo" : "Inativo"}</span>
+            <button 
+              onClick={() => handleDelete(s.id)}
+              style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', padding: '0.25rem 0.5rem', cursor: 'pointer' }}
+            >
+              Deletar
+            </button>
           </li>
         ))}
       </ul>

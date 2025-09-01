@@ -27,10 +27,10 @@ export default function Queue() {
           const status = await getQueueStatus(queue.simulatorId);
           if (Array.isArray(status.data)) {
             activeItemsMap[queue.simulatorId] = status.data;
-            const activeItem = status.data.find((item: ActiveQueueItem) => item.status === 'ACTIVE');
+            const currentItem = status.data.find((item: ActiveQueueItem) => item.status === 'ACTIVE' || item.status === 'CONFIRMED');
             statuses[queue.simulatorId] = { 
-              isActive: !!activeItem,
-              currentPlayer: activeItem ? activeItem.player : undefined
+              isActive: !!currentItem,
+              currentPlayer: currentItem ? currentItem.player : undefined
             };
           } else {
             statuses[queue.simulatorId] = status.data;
@@ -73,7 +73,7 @@ export default function Queue() {
     };
     
     loadInitialData();
-    const interval = setInterval(loadAllQueues, 3000);
+    const interval = setInterval(loadAllQueues, 1000);
     return () => clearInterval(interval);
   }, [loadAllQueues, loadPlayers]);
 
@@ -189,15 +189,43 @@ export default function Queue() {
           const status = queueStatuses[sim.simulatorId];
           return (
             <div key={sim.simulatorId} className="queue-card">
-              <h3>{sim.simulatorName}</h3>
+              <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {sim.simulatorName}
+                {(() => {
+                  const currentItem = activeItems[sim.simulatorId]?.find(item => item.status === 'ACTIVE' || item.status === 'CONFIRMED');
+                  if (!currentItem) return null;
+                  
+                  if (currentItem.status === 'CONFIRMED') {
+                    return <span style={{ color: '#4caf50', fontSize: '0.9rem' }}>jogando</span>;
+                  }
+                  
+                  if (currentItem.status === 'ACTIVE') {
+                    return <span style={{ color: '#dc2626', fontSize: '0.9rem' }}>aguardando</span>;
+                  }
+                  
+                  return null;
+                })()
+                }
+              </h3>
               
               {status?.isActive && (
                 <div className="timed-status">
-                  <p>Jogador atual: {status.currentPlayer?.name}
-                    {activeItems[sim.simulatorId]?.find(item => item.status === 'ACTIVE')?.timeLeft && 
-                      ` - ${Math.floor(activeItems[sim.simulatorId].find(item => item.status === 'ACTIVE')!.timeLeft / 60000)}:${String(Math.floor((activeItems[sim.simulatorId].find(item => item.status === 'ACTIVE')!.timeLeft % 60000) / 1000)).padStart(2, '0')}`
+                  {(() => {
+                    const currentItem = activeItems[sim.simulatorId]?.find(item => item.status === 'ACTIVE' || item.status === 'CONFIRMED');
+                    if (!currentItem) return null;
+                    
+                    if (currentItem.status === 'ACTIVE') {
+                      const timeDisplay = currentItem.timeLeft ? ` - ${Math.floor(currentItem.timeLeft / 60000)}:${String(Math.floor((currentItem.timeLeft % 60000) / 1000)).padStart(2, '0')}` : '';
+                      return <p>Aguardando pelo jogador: {status.currentPlayer?.name}{timeDisplay}</p>;
                     }
-                  </p>
+                    
+                    return (
+                      <p>Jogador atual: {status.currentPlayer?.name}
+                        {currentItem.timeLeft ? ` - ${Math.floor(currentItem.timeLeft / 60000)}:${String(Math.floor((currentItem.timeLeft % 60000) / 1000)).padStart(2, '0')}` : ''}
+                      </p>
+                    );
+                  })()
+                  }
                 </div>
               )}
               
@@ -238,22 +266,29 @@ export default function Queue() {
                       >
                         Remover
                       </button>
-                      {status?.isActive && status.currentPlayer?.name === q.player?.name && (
-                        <>
-                          <button
-                            onClick={() => handleConfirmTurn(q.id)}
-                            className="confirm-button"
-                          >
-                            Confirmar
-                          </button>
-                          <button
-                            onClick={() => handleMissedTurn(q.id)}
-                            className="missed-button"
-                          >
-                            Perdeu Turno
-                          </button>
-                        </>
-                      )}
+                      {(() => {
+                        const currentItem = activeItems[sim.simulatorId]?.find(item => (item.status === 'ACTIVE' || item.status === 'CONFIRMED') && item.player.name === q.player?.name);
+                        if (!currentItem) return null;
+                        
+                        return (
+                          <>
+                            {currentItem.status === 'ACTIVE' && (
+                              <button
+                                onClick={() => handleConfirmTurn(currentItem.id)}
+                                className="confirm-button"
+                              >
+                                Confirmar
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleMissedTurn(currentItem.id)}
+                              className="missed-button"
+                            >
+                              Perdeu Turno
+                            </button>
+                          </>
+                        );
+                      })()}
                     </div>
                   </li>
                 ))}

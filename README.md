@@ -75,6 +75,7 @@ The frontend expects a REST API with the following endpoints:
 - `GET /queue/:simulatorId` - Get queue for simulator
 - `POST /queue` - Add player to queue
 - `DELETE /queue/:id` - Remove player from queue
+- `DELETE /simulators/:id` - Delete simulator
 - `POST /timed-queue/:simulatorId/start` - Start timed queue
 - `GET /timed-queue/:simulatorId/status` - Get queue status
 - `POST /timed-queue/:simulatorId/next` - Process next player
@@ -91,26 +92,30 @@ The frontend expects a REST API with the following endpoints:
 ## Features in Detail
 
 ### Player Registration
-- Simple form with name (required) and optional contact fields
+- Simple form with name (required) and optional contact fields (email, phone, instagram)
 - Success feedback and form validation
-- Automatic redirect after registration
+- Modern dark theme interface
 
 ### Queue Management
-- Real-time queue display with player positions
+- Real-time queue display with player positions (updates every second)
 - Add/remove players from queues
-- Visual indicators for active players
-- Time remaining display for active sessions
+- Visual status indicators ("jogando" in green, "aguardando" in red)
+- Time remaining display for both waiting and active sessions
+- Reverse queue order (current player at top)
 
 ### Timed Queues
-- Configurable time limits per session
-- Automatic progression to next player
-- Confirm/missed turn handling
-- Live countdown display
+- Two-phase system: confirmation phase (3 minutes) + play phase (5 minutes)
+- Manual confirmation required before play timer starts
+- Confirm/missed turn handling with proper status management
+- Live countdown display in MM:SS format
+- Automatic queue progression after turn completion
 
 ### Admin Dashboard
-- Complete system overview
-- Player, queue, and simulator management
-- Real-time status updates every 3 seconds
+- Complete system overview with simulator management
+- Player, queue, and simulator CRUD operations
+- Delete simulator functionality
+- Real-time status updates with live timers
+- Modern desktop-optimized interface
 
 ## Contributing
 

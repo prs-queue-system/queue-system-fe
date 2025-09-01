@@ -3,6 +3,7 @@ import { fetchAllQueues, createQueue, removePlayer, fetchPlayers, startTimedQueu
 import './Queue.css';
 
 type QueueStatus = { isActive: boolean; currentPlayer?: { id: number; name: string }; timeRemaining?: number };
+type ActiveQueueItem = { id: number; player: { id: number; name: string }; status: string; timeLeft: number };
 
 export default function Queue() {
   const [allQueues, setAllQueues] = useState<SimulatorQueue[]>([]);
@@ -11,6 +12,7 @@ export default function Queue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [queueStatuses, setQueueStatuses] = useState<Record<number, QueueStatus>>({});
+  const [activeItems, setActiveItems] = useState<Record<number, ActiveQueueItem[]>>({});
 
   const loadAllQueues = useCallback(async () => {
     try {
@@ -19,16 +21,27 @@ export default function Queue() {
       setAllQueues(queues || []);
       
       const statuses: Record<number, QueueStatus> = {};
+      const activeItemsMap: Record<number, ActiveQueueItem[]> = {};
       for (const queue of queues || []) {
         try {
           const status = await getQueueStatus(queue.simulatorId);
-          statuses[queue.simulatorId] = status.data;
+          if (Array.isArray(status.data)) {
+            activeItemsMap[queue.simulatorId] = status.data;
+            const activeItem = status.data.find((item: ActiveQueueItem) => item.status === 'ACTIVE');
+            statuses[queue.simulatorId] = { 
+              isActive: !!activeItem,
+              currentPlayer: activeItem ? activeItem.player : undefined
+            };
+          } else {
+            statuses[queue.simulatorId] = status.data;
+          }
         } catch {
-          // Silently handle missing timed queue endpoints
           statuses[queue.simulatorId] = { isActive: false };
+          activeItemsMap[queue.simulatorId] = [];
         }
       }
       setQueueStatuses(statuses);
+      setActiveItems(activeItemsMap);
     } catch (err) {
       setError('Erro ao carregar filas. Por favor, tente novamente.');
       console.error('Error loading queues:', err);
@@ -180,8 +193,11 @@ export default function Queue() {
               
               {status?.isActive && (
                 <div className="timed-status">
-                  <p>Jogador atual: {status.currentPlayer?.name}</p>
-                  {status.timeRemaining && <p>Tempo restante: {status.timeRemaining}s</p>}
+                  <p>Jogador atual: {status.currentPlayer?.name}
+                    {activeItems[sim.simulatorId]?.find(item => item.status === 'ACTIVE')?.timeLeft && 
+                      ` - ${Math.floor(activeItems[sim.simulatorId].find(item => item.status === 'ACTIVE')!.timeLeft / 60000)}:${String(Math.floor((activeItems[sim.simulatorId].find(item => item.status === 'ACTIVE')!.timeLeft % 60000) / 1000)).padStart(2, '0')}`
+                    }
+                  </p>
                 </div>
               )}
               
@@ -212,7 +228,7 @@ export default function Queue() {
               </div>
               
               <ul className="queue-list">
-                {(sim.queue || []).map(q => (
+                {(sim.queue || []).slice().reverse().map(q => (
                   <li key={q.id} className="queue-item">
                     <span>{q.player?.name ?? "Sem nome"}</span>
                     <div className="item-controls">

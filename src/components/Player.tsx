@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { createPlayer, fetchPlayers, checkEmailExists } from "../services/api";
-
-type Player = { id: number; name: string };
+import { createPlayer, fetchPlayers, checkEmailExists, type Player } from "../services/api";
 
 export default function Player(){
     const [name, setName] = useState("");
@@ -21,7 +19,7 @@ export default function Player(){
         if (!name.trim() || !email.trim()) return;
         setCreateError('');
         try {
-            await createPlayer(name, email);
+            await createPlayer(name, email, phone);
             setName("");
             setEmail("");
             setPhone("");

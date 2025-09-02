@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPlayer, checkEmailExists } from '../services/api';
 import './Register.css';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
-    instagram: ''
+    phone: ''
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -22,11 +23,11 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      await createPlayer(formData.name, formData.email);
+      await createPlayer(formData.name, formData.email, formData.phone);
       setSuccess(true);
-      setFormData({ name: '', email: '', phone: '', instagram: '' });
-    } catch (err: any) {
-      setError(err.message);
+      setFormData({ name: '', email: '', phone: '' });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erro ao registrar jogador');
     } finally {
       setLoading(false);
     }
@@ -39,9 +40,14 @@ export default function Register() {
     }));
   };
 
+  const isSubmitDisabled = useMemo(() => 
+    loading || !formData.name.trim() || !formData.email.trim() || !!emailError || checkingEmail,
+    [loading, formData.name, formData.email, emailError, checkingEmail]
+  );
+
   useEffect(() => {
     const checkEmail = async () => {
-      if (!formData.email.trim() || !formData.email.includes('@')) {
+      if (!formData.email.trim() || !EMAIL_REGEX.test(formData.email)) {
         setEmailError('');
         return;
       }
@@ -122,19 +128,7 @@ export default function Register() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="instagram">Instagram</label>
-            <input
-              type="text"
-              id="instagram"
-              name="instagram"
-              value={formData.instagram}
-              onChange={handleChange}
-              placeholder="@seu_instagram"
-            />
-          </div>
-
-          <button type="submit" disabled={loading || !formData.name.trim() || !formData.email.trim() || !!emailError || checkingEmail}>
+          <button type="submit" disabled={isSubmitDisabled}>
             {loading ? 'Registrando...' : 'Registrar'}
           </button>
         </form>

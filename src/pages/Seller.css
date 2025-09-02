@@ -329,3 +329,89 @@
   color: white;
   font-size: 1.2rem;
 }
+
+.qr-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.qr-popup {
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+}
+
+.qr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.qr-header h3 {
+  color: white;
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  color: #dc2626;
+}
+
+.qr-content {
+  text-align: center;
+}
+
+.qr-content p {
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.qr-image {
+  margin: 1rem 0;
+}
+
+.qr-image img {
+  max-width: 100%;
+  height: auto;
+  border: 2px solid #333;
+  border-radius: 8px;
+}
+
+.qr-url {
+  background: #333;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.qr-url p {
+  margin: 0;
+  font-size: 0.9rem;
+  word-break: break-all;
+  color: #ccc;
+}

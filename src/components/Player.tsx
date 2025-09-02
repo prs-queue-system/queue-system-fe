@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { createPlayer, fetchPlayers, checkEmailExists, type Player } from "../services/api";
+import { createPlayer, fetchPlayers, checkEmailExists, getSellers, type Player } from "../services/api";
 
 export default function Player(){
     const [name, setName] = useState("");
@@ -8,6 +8,8 @@ export default function Player(){
     const [phone, setPhone] = useState("");
     const [instagram, setInstagram] = useState("");
     const [players, setPlayers] = useState<Player[]>([]);
+    const [sellers, setSellers] = useState<any[]>([]);
+    const [user, setUser] = useState<any>(null);
     const [createError, setCreateError] = useState('');
     const [emailError, setEmailError] = useState('');
     const [checkingEmail, setCheckingEmail] = useState(false);
@@ -38,11 +40,31 @@ export default function Player(){
         }
     }, []);
 
+    const loadSellers = useCallback(async () => {
+        try {
+            const sellersList = await getSellers();
+            setSellers(Array.isArray(sellersList) ? sellersList : []);
+        } catch (error) {
+            console.error('Error loading sellers:', error);
+            setSellers([]);
+        }
+    }, []);
+
     useEffect(() => {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            try {
+                setUser(JSON.parse(userData));
+            } catch (error) {
+                console.error('Error parsing user data:', error);
+            }
+        }
+        
         loadPlayers();
-        const interval = setInterval(loadPlayers, 5000); // Reload players every 5 seconds
+        loadSellers();
+        const interval = setInterval(loadPlayers, 5000);
         return () => clearInterval(interval);
-    }, [loadPlayers]);
+    }, [loadPlayers, loadSellers]);
 
     const filteredPlayers = useMemo(() => {
         return players.filter(player => 
@@ -133,24 +155,36 @@ export default function Player(){
                     </div>
                     
                     <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(5, 1fr)', 
-                        gap: '1rem',
+                        background: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: '8px',
                         marginBottom: '1rem'
                     }}>
-                        {paginatedPlayers.map(player => (
+                        {paginatedPlayers.map((player, index) => (
                             <div key={player.id} style={{ 
-                                color: 'white', 
-                                padding: '1rem',
-                                background: '#1a1a1a',
-                                border: '1px solid #333',
-                                borderRadius: '8px',
-                                textAlign: 'center'
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '0.75rem 1rem',
+                                borderBottom: index < paginatedPlayers.length - 1 ? '1px solid #333' : 'none',
+                                color: 'white'
                             }}>
-                                <div style={{ fontSize: '0.8rem', color: '#666' }}>#{player.id}</div>
-                                <div>{player.name}</div>
+                                <div style={{ width: '60px', color: '#666', fontSize: '0.9rem' }}>#{player.id}</div>
+                                <div style={{ flex: 1 }}>{player.name}</div>
+                                <div style={{ width: '200px', color: '#666', fontSize: '0.8rem' }}>
+                                    {player.email}{player.phone ? ` / ${player.phone}` : ''}
+                                </div>
+                                {(user?.role === 'ADMIN' || user?.role === 'MASTER') && (
+                                    <div style={{ width: '150px', color: '#666', fontSize: '0.8rem' }}>
+                                        {player.sellerId ? sellers.find(s => s.id === player.sellerId)?.name || 'N/A' : 'Sem vendedor'}
+                                    </div>
+                                )}
                             </div>
                         ))}
+                        {paginatedPlayers.length === 0 && (
+                            <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+                                Nenhum jogador encontrado
+                            </div>
+                        )}
                     </div>
                     
                     {totalPages > 1 && (

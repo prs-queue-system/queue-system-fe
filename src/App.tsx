@@ -1,8 +1,13 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Admin from './pages/Admin';
-import Register from './pages/Register';
-import Seller from './pages/Seller';
-import Login from './pages/Login';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import Admin from "./pages/Admin";
+import Register from "./pages/Register";
+import Seller from "./pages/Seller";
+import Login from "./pages/Login";
 import "./App.css";
 
 export default function App() {
@@ -11,13 +16,30 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={
-          <div className="app-container">
-            <Admin />
-          </div>
-        } />
-        <Route path="/register" element={<Register />} />
-        <Route path="/seller" element={<Seller />} />
+        <Route
+          path="/admin"
+          element={
+            <div className="app-container">
+              <Admin />
+            </div>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <div className="app-container">
+              <Register />
+            </div>
+          }
+        />
+        <Route
+          path="/seller"
+          element={
+            <div className="app-container">
+              <Seller />
+            </div>
+          }
+        />
       </Routes>
     </Router>
   );

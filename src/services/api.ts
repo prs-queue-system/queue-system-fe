@@ -51,7 +51,19 @@ export async function fetchPlayers(): Promise<Player[]> {
   try {
     const res = await fetch(`${ApiConfig.getBaseUrl()}/players`);
     if (!res.ok) throw new Error("Erro ao buscar jogadores");
-    return res.json();
+    const data = await res.json();
+    return data.map((player: any) => ({
+      id: player.id,
+      name: player.name,
+      email: player.email,
+      role: player.role || "PLAYER",
+      phone: player.phone,
+      instagram: player.instagram,
+      inQueue: player.inQueue,
+      sellerId: player.sellerId,
+      createdAt: player.createdAt,
+      updatedAt: player.updatedAt,
+    }));
   } catch {
     throw new Error("Erro ao buscar jogadores");
   }
@@ -265,21 +277,24 @@ export async function fetchAllQueues(): Promise<SimulatorQueue[]> {
       (sim: { id: number; name: string; Queue?: any[] }) => ({
         simulatorId: sim.id,
         simulatorName: sim.name,
-        queue: (sim.Queue || []).map((q: any) => ({
-          id: q.id,
-          player: {
-            id: q.Player?.id || q.playerId,
-            name: q.Player?.name || "Unknown",
-            email: q.Player?.email || "",
-            role: q.Player?.role || "PLAYER",
-            phone: q.Player?.phone,
-            instagram: q.Player?.instagram,
-            inQueue: q.Player?.inQueue,
-            sellerId: q.Player?.sellerId,
-            createdAt: q.Player?.createdAt,
-            updatedAt: q.Player?.updatedAt,
-          },
-        })),
+        queue: (sim.Queue || []).map((q: any) => {
+          const user = q.User || q.Player;
+          return {
+            id: q.id,
+            player: {
+              id: user?.id || q.playerId || q.userId,
+              name: user?.name || "Unknown",
+              email: user?.email || "",
+              role: user?.role || "PLAYER",
+              phone: user?.phone,
+              instagram: user?.instagram,
+              inQueue: user?.inQueue,
+              sellerId: user?.sellerId,
+              createdAt: user?.createdAt,
+              updatedAt: user?.updatedAt,
+            },
+          };
+        }),
       })
     );
   } catch {
@@ -442,7 +457,8 @@ export async function getSellers() {
   try {
     const res = await fetch(`${ApiConfig.getBaseUrl()}/auth/sellers`);
     if (!res.ok) throw new Error("Erro ao buscar vendedores");
-    return res.json();
+    const result = await res.json();
+    return result.data || result;
   } catch {
     throw new Error("Erro ao buscar vendedores");
   }
@@ -464,5 +480,65 @@ export async function getSellerQRCode(sellerId: number) {
     return res.json();
   } catch {
     throw new Error("Erro ao buscar QR Code");
+  }
+}
+
+// Time Patterns API
+export async function fetchTimePatterns() {
+  try {
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/time-patterns`);
+    if (!res.ok) throw new Error("Erro ao buscar padrões de tempo");
+    return res.json();
+  } catch {
+    throw new Error("Erro ao buscar padrões de tempo");
+  }
+}
+
+export async function createTimePattern(name: string, timeMinutes: number, price: number) {
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/time-patterns`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ name, timeMinutes, price }),
+    });
+    if (!res.ok) throw new Error("Erro ao criar padrão");
+    return res.json();
+  } catch {
+    throw new Error("Erro ao criar padrão");
+  }
+}
+
+export async function updateTimePattern(id: number, name: string, timeMinutes: number, price: number) {
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/time-patterns/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ name, timeMinutes, price }),
+    });
+    if (!res.ok) throw new Error("Erro ao atualizar padrão");
+    return res.json();
+  } catch {
+    throw new Error("Erro ao atualizar padrão");
+  }
+}
+
+export async function deleteTimePattern(id: number) {
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/time-patterns/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Erro ao deletar padrão");
+  } catch {
+    throw new Error("Erro ao deletar padrão");
   }
 }

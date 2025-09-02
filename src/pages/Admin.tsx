@@ -4,6 +4,7 @@ import Player from "../components/Player";
 import Queue from "../components/Queue";
 import Simulators from "../components/Simulators";
 import UserManagement from "../components/UserManagement";
+import TimePatterns from "../components/TimePatterns";
 
 export default function Admin() {
   const [user, setUser] = useState<any>(null);
@@ -83,9 +84,14 @@ export default function Admin() {
       </div>
 
       {ADMIN_ROLES.includes(user.role) && (
-        <div className="section">
-          <UserManagement userRole={user.role} />
-        </div>
+        <>
+          <div className="section">
+            <UserManagement userRole={user.role} />
+          </div>
+          <div className="section">
+            <TimePatterns />
+          </div>
+        </>
       )}
 
       <div className="section">

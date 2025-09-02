@@ -10,6 +10,8 @@ import {
   confirmTurn,
   handleMissed,
   getSellerQRCode,
+  fetchTimePatterns,
+  createPlayer,
   type Player,
   type SimulatorQueue,
 } from "../services/api";
@@ -17,12 +19,12 @@ import "./Seller.css";
 
 type QueueStatus = {
   isActive: boolean;
-  currentPlayer?: { id: number; name: string };
+  currentPlayer?: Player;
   timeRemaining?: number;
 };
 type ActiveQueueItem = {
   id: number;
-  player: { id: number; name: string };
+  player: Player;
   status: string;
   timeLeft: number;
 };
@@ -38,10 +40,10 @@ const formatTime = (timeLeft: number): string => {
 export default function Seller() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [queues, setQueues] = useState<SimulatorQueue[]>([]);
+  const [timePatterns, setTimePatterns] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [timeMinutes, setTimeMinutes] = useState(5);
-  const [amountPaid, setAmountPaid] = useState(0);
+  const [selectedPattern, setSelectedPattern] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [queueStatuses, setQueueStatuses] = useState<
     Record<number, QueueStatus>
@@ -53,6 +55,9 @@ export default function Seller() {
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrCodeData, setQRCodeData] = useState<QRCodeData | null>(null);
   const [loadingQR, setLoadingQR] = useState(false);
+  const [showRegisterForm, setShowRegisterForm] = useState(false);
+  const [registerForm, setRegisterForm] = useState({ name: "", email: "", phone: "" });
+  const [registerLoading, setRegisterLoading] = useState(false);
 
   const loadQueues = useCallback(async () => {
     try {
@@ -111,6 +116,15 @@ export default function Seller() {
     }
   }, []);
 
+  const loadTimePatterns = useCallback(async () => {
+    try {
+      const patterns = await fetchTimePatterns();
+      setTimePatterns(patterns || []);
+    } catch (error) {
+      console.error("Error loading time patterns:", error);
+    }
+  }, []);
+
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) {
@@ -132,7 +146,7 @@ export default function Seller() {
 
     const loadData = async () => {
       try {
-        await Promise.all([loadPlayers(), loadQueues()]);
+        await Promise.all([loadPlayers(), loadQueues(), loadTimePatterns()]);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -147,7 +161,7 @@ export default function Seller() {
       clearInterval(queueInterval);
       clearInterval(playerInterval);
     };
-  }, [loadQueues, loadPlayers]);
+  }, [loadQueues, loadPlayers, loadTimePatterns]);
 
   const filteredPlayers = useMemo(() => {
     if (!searchTerm.trim()) return [];
@@ -157,19 +171,18 @@ export default function Seller() {
   }, [players, searchTerm]);
 
   const handleAddToQueue = async (simulatorId: number) => {
-    if (!selectedPlayer || timeMinutes <= 0 || amountPaid < 0) return;
+    if (!selectedPlayer || !selectedPattern) return;
 
     try {
       await createQueue(
         selectedPlayer.id,
         simulatorId,
-        timeMinutes,
-        amountPaid
+        selectedPattern.timeMinutes,
+        selectedPattern.price
       );
       setSelectedPlayer(null);
       setSearchTerm("");
-      setTimeMinutes(5);
-      setAmountPaid(0);
+      setSelectedPattern(null);
       await Promise.all([loadQueues(), loadPlayers()]);
     } catch (error) {
       console.error(
@@ -215,9 +228,9 @@ export default function Seller() {
     }
   };
 
-  const handleMissedTurn = async (queueId: number) => {
+  const handleMissedTurn = async (simulatorId: number) => {
     try {
-      await handleMissed(queueId);
+      await processNext(simulatorId);
       await loadQueues();
     } catch (error) {
       console.error("Error handling missed turn:", error);
@@ -236,6 +249,29 @@ export default function Seller() {
       console.error("Error loading QR Code:", error);
     } finally {
       setLoadingQR(false);
+    }
+  };
+
+  const handleRegisterPlayer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!registerForm.name.trim() || !registerForm.email.trim()) return;
+
+    setRegisterLoading(true);
+    try {
+      const newPlayer = await createPlayer(
+        registerForm.name,
+        registerForm.email,
+        registerForm.phone,
+        user?.id
+      );
+      setSelectedPlayer(newPlayer);
+      setRegisterForm({ name: "", email: "", phone: "" });
+      setShowRegisterForm(false);
+      await loadPlayers();
+    } catch (error) {
+      console.error("Error registering player:", error);
+    } finally {
+      setRegisterLoading(false);
     }
   };
 
@@ -299,7 +335,97 @@ export default function Seller() {
       </div>
 
       <div className="search-section">
-        <h2>Buscar Jogador</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <h2 style={{ margin: 0 }}>Buscar Jogador</h2>
+          <button
+            onClick={() => setShowRegisterForm(!showRegisterForm)}
+            style={{
+              padding: "0.5rem 1rem",
+              background: "#333",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer"
+            }}
+          >
+            {showRegisterForm ? "Cancelar" : "Cadastrar Novo"}
+          </button>
+        </div>
+
+        {showRegisterForm && (
+          <form onSubmit={handleRegisterPlayer} style={{ marginBottom: "1rem", padding: "1rem", background: "#1a1a1a", borderRadius: "8px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "1rem", alignItems: "end" }}>
+              <div>
+                <label style={{ display: "block", marginBottom: "0.5rem", color: "white" }}>Nome *</label>
+                <input
+                  type="text"
+                  value={registerForm.name}
+                  onChange={(e) => setRegisterForm(prev => ({ ...prev, name: e.target.value }))}
+                  style={{
+                    padding: "0.5rem",
+                    border: "2px solid #333",
+                    borderRadius: "6px",
+                    background: "#000",
+                    color: "white",
+                    width: "100%",
+                    boxSizing: "border-box"
+                  }}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "0.5rem", color: "white" }}>Email *</label>
+                <input
+                  type="email"
+                  value={registerForm.email}
+                  onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
+                  style={{
+                    padding: "0.5rem",
+                    border: "2px solid #333",
+                    borderRadius: "6px",
+                    background: "#000",
+                    color: "white",
+                    width: "100%",
+                    boxSizing: "border-box"
+                  }}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "0.5rem", color: "white" }}>Telefone</label>
+                <input
+                  type="tel"
+                  value={registerForm.phone}
+                  onChange={(e) => setRegisterForm(prev => ({ ...prev, phone: e.target.value }))}
+                  style={{
+                    padding: "0.5rem",
+                    border: "2px solid #333",
+                    borderRadius: "6px",
+                    background: "#000",
+                    color: "white",
+                    width: "100%",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={registerLoading || !registerForm.name.trim() || !registerForm.email.trim()}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: registerLoading || !registerForm.name.trim() || !registerForm.email.trim() ? "#666" : "#dc2626",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: registerLoading || !registerForm.name.trim() || !registerForm.email.trim() ? "not-allowed" : "pointer"
+                }}
+              >
+                {registerLoading ? "Cadastrando..." : "Cadastrar"}
+              </button>
+            </div>
+          </form>
+        )}
+
         <input
           type="text"
           placeholder="Digite o nome do jogador..."
@@ -344,6 +470,7 @@ export default function Seller() {
               gap: "1rem",
               marginTop: "1rem",
               alignItems: "end",
+              justifyContent: "center",
             }}
           >
             <div>
@@ -354,48 +481,28 @@ export default function Seller() {
                   color: "white",
                 }}
               >
-                Tempo (minutos)
+                Padrão de Tempo
               </label>
-              <input
-                type="number"
-                min="1"
-                value={timeMinutes}
-                onChange={(e) => setTimeMinutes(Number(e.target.value))}
-                style={{
-                  padding: "0.5rem",
-                  border: "2px solid #333",
-                  borderRadius: "6px",
-                  background: "#000",
-                  color: "white",
-                  width: "100px",
-                }}
-              />
-            </div>
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "0.5rem",
-                  color: "white",
-                }}
-              >
-                Valor Pago (R$)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={amountPaid}
-                onChange={(e) => setAmountPaid(Number(e.target.value))}
-                style={{
-                  padding: "0.5rem",
-                  border: "2px solid #333",
-                  borderRadius: "6px",
-                  background: "#000",
-                  color: "white",
-                  width: "120px",
-                }}
-              />
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}>
+                {timePatterns.map((pattern) => (
+                  <button
+                    key={pattern.id}
+                    onClick={() => setSelectedPattern(pattern)}
+                    style={{
+                      padding: "0.75rem 1rem",
+                      border: `2px solid ${selectedPattern?.id === pattern.id ? "#dc2626" : "#333"}`,
+                      borderRadius: "6px",
+                      background: selectedPattern?.id === pattern.id ? "#dc2626" : "#000",
+                      color: "white",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {pattern.name}<br/>
+                    <small>{pattern.timeMinutes}min - R$ {pattern.price.toFixed(2)}</small>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -471,84 +578,90 @@ export default function Seller() {
                 <div className="queue-controls">
                   <button
                     onClick={() => handleAddToQueue(sim.simulatorId)}
-                    disabled={!selectedPlayer}
-                    className="add-button"
+                    disabled={!selectedPlayer || !selectedPattern}
+                    style={{
+                      width: "100%",
+                      padding: "1rem 2rem",
+                      background: !selectedPlayer || !selectedPattern ? "#666" : "#dc2626",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "1.1rem",
+                      fontWeight: "bold",
+                      cursor: !selectedPlayer || !selectedPattern ? "not-allowed" : "pointer",
+                      transition: "all 0.2s ease"
+                    }}
                   >
                     Adicionar à Fila
                   </button>
-
-                  <button
-                    onClick={() => handleStartTimed(sim.simulatorId)}
-                    disabled={status?.isActive}
-                    className="timed-button"
-                  >
-                    Iniciar Fila Temporizada
-                  </button>
-
-                  <button
-                    onClick={() => handleProcessNext(sim.simulatorId)}
-                    disabled={!status?.isActive}
-                    className="next-button"
-                  >
-                    Próximo Jogador
-                  </button>
                 </div>
 
-                <ul className="queue-list">
-                  {(sim.queue || [])
-                    .slice()
-                    .reverse()
-                    .map((q) => (
-                      <li key={q.id} className="queue-item">
-                        <span>{q.player?.name ?? "Sem nome"}</span>
-                        <div className="item-controls">
-                          <button
-                            onClick={() => handleRemove(q.id)}
-                            className="remove-button"
-                          >
-                            Remover
-                          </button>
-                          {(() => {
-                            const currentItem = activeItems[
-                              sim.simulatorId
-                            ]?.find(
-                              (item) =>
-                                (item.status === "ACTIVE" ||
-                                  item.status === "CONFIRMED") &&
-                                item.player.name === q.player?.name
-                            );
-                            if (!currentItem) return null;
+                <div className="queue-list">
+                  {(() => {
+                    const currentItem = activeItems[sim.simulatorId]?.find(
+                      (item) => item.status === "ACTIVE" || item.status === "CONFIRMED"
+                    );
+                    const queueItems = (sim.queue || []).slice();
+                    const currentPlayerInQueue = currentItem ? queueItems.find(q => q.player?.id === currentItem.player.id) : null;
+                    const nextPlayers = queueItems.filter(q => q.player?.id !== currentItem?.player.id);
 
-                            return (
-                              <>
+                    return (
+                      <>
+                        {currentPlayerInQueue && (
+                          <>
+                            <div style={{ color: "white", fontSize: "0.9rem", marginBottom: "0.5rem", fontWeight: "bold" }}>Jogando</div>
+                            <div style={{
+                              background: "rgba(220, 38, 38, 0.3)",
+                              border: "1px solid #dc2626",
+                              borderRadius: "6px",
+                              padding: "0.75rem",
+                              marginBottom: "1rem",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center"
+                            }}>
+                              <span style={{ color: "white" }}>{currentPlayerInQueue.player?.name ?? "Sem nome"}</span>
+                              <div style={{ display: "flex", gap: "0.5rem" }}>
+                                <button onClick={() => handleRemove(currentPlayerInQueue.id)} className="remove-button">Remover</button>
                                 {currentItem.status === "ACTIVE" && (
-                                  <button
-                                    onClick={() =>
-                                      handleConfirmTurn(currentItem.id)
-                                    }
-                                    className="confirm-button"
-                                  >
-                                    Confirmar
-                                  </button>
+                                  <button onClick={() => handleConfirmTurn(currentItem.id)} className="confirm-button">Confirmar</button>
                                 )}
-                                <button
-                                  onClick={() =>
-                                    handleMissedTurn(currentItem.id)
-                                  }
-                                  className="missed-button"
-                                >
-                                  Perdeu Turno
-                                </button>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </li>
-                    ))}
-                  {(!sim.queue || sim.queue.length === 0) && (
-                    <li className="empty-queue">Fila vazia</li>
-                  )}
-                </ul>
+                                <button onClick={() => handleMissedTurn(sim.simulatorId)} className="missed-button">Próximo jogador</button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        
+                        {nextPlayers.length > 0 && (
+                          <>
+                            <div style={{ color: "white", fontSize: "0.9rem", marginBottom: "0.5rem", fontWeight: "bold" }}>Próximo</div>
+                            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                              {nextPlayers.map((q, index) => (
+                                <li key={q.id} style={{
+                                  background: "#1a1a1a",
+                                  border: "1px solid #333",
+                                  borderRadius: "6px",
+                                  padding: "0.75rem",
+                                  marginBottom: "0.5rem",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center"
+                                }}>
+                                  <span style={{ color: "white" }}>{index + 1}. {q.player?.name ?? "Sem nome"}</span>
+                                  <button onClick={() => handleRemove(q.id)} className="remove-button">Remover</button>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                        
+                        {(!sim.queue || sim.queue.length === 0) && (
+                          <div style={{ color: "#666", textAlign: "center", padding: "2rem" }}>Fila vazia</div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             );
           })}

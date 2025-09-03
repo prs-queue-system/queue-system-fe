@@ -1,4 +1,3 @@
-// src/config/api.ts
 export class ApiConfig {
   static getBaseUrl(): string {
     const envUrl = import.meta.env.VITE_API_URL;

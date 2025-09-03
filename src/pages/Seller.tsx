@@ -1,21 +1,21 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   fetchPlayers,
   fetchAllQueues,
   createQueue,
   removePlayer,
-  startTimedQueue,
   getQueueStatus,
   processNext,
   confirmTurn,
-  handleMissed,
   getSellerQRCode,
   fetchTimePatterns,
   createPlayer,
-  type Player,
-  type SimulatorQueue,
+  movePlayer,
 } from "../services/api";
-import "./Seller.css";
+import type { Player, SimulatorQueue } from "../types";
+import "../styles/pages/Seller.css";
+import F1Car from "../components/F1Car";
 
 type QueueStatus = {
   isActive: boolean;
@@ -27,6 +27,7 @@ type ActiveQueueItem = {
   player: Player;
   status: string;
   timeLeft: number;
+  position: number;
 };
 type User = { id: number; name: string; role: string };
 type QRCodeData = { qrCode: string; registerUrl: string };
@@ -155,11 +156,86 @@ export default function Seller() {
     };
 
     loadData();
-    const queueInterval = setInterval(loadQueues, 3000);
-    const playerInterval = setInterval(loadPlayers, 5000);
+    // WebSocket connection with retry
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080';
+    let ws: WebSocket | null = null;
+    let reconnectAttempts = 0;
+    let queueInterval: number | null = null;
+    let playerInterval: number | null = null;
+    
+    const connectWebSocket = () => {
+      try {
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          reconnectAttempts = 0;
+          if (queueInterval) {
+            clearInterval(queueInterval);
+            queueInterval = null;
+          }
+          if (playerInterval) {
+            clearInterval(playerInterval);
+            playerInterval = null;
+          }
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'QUEUE_UPDATE' || data.type === 'TIMED_QUEUE_UPDATE') {
+              loadQueues();
+            }
+            if (data.type === 'PLAYER_UPDATE') {
+              loadPlayers();
+            }
+          } catch (err) {
+            console.error('WebSocket message error:', err);
+          }
+        };
+        
+        ws.onerror = () => {
+          console.log('WebSocket error, falling back to polling');
+          if (!queueInterval) {
+            queueInterval = setInterval(loadQueues, 3000);
+          }
+          if (!playerInterval) {
+            playerInterval = setInterval(loadPlayers, 5000);
+          }
+        };
+        
+        ws.onclose = () => {
+          if (reconnectAttempts < 3) {
+            setTimeout(() => {
+              reconnectAttempts++;
+              connectWebSocket();
+            }, Math.pow(2, reconnectAttempts) * 1000);
+          } else {
+            if (!queueInterval) {
+              queueInterval = setInterval(loadQueues, 3000);
+            }
+            if (!playerInterval) {
+              playerInterval = setInterval(loadPlayers, 5000);
+            }
+          }
+        };
+      } catch (err) {
+        console.error('WebSocket connection failed:', err);
+        if (!queueInterval) {
+          queueInterval = setInterval(loadQueues, 3000);
+        }
+        if (!playerInterval) {
+          playerInterval = setInterval(loadPlayers, 5000);
+        }
+      }
+    };
+    
+    connectWebSocket();
+
     return () => {
-      clearInterval(queueInterval);
-      clearInterval(playerInterval);
+      if (ws) ws.close();
+      if (queueInterval) clearInterval(queueInterval);
+      if (playerInterval) clearInterval(playerInterval);
     };
   }, [loadQueues, loadPlayers, loadTimePatterns]);
 
@@ -201,24 +277,6 @@ export default function Seller() {
     }
   };
 
-  const handleStartTimed = async (simulatorId: number) => {
-    try {
-      await startTimedQueue(simulatorId);
-      await loadQueues();
-    } catch (error) {
-      console.error("Error starting timed queue:", error);
-    }
-  };
-
-  const handleProcessNext = async (simulatorId: number) => {
-    try {
-      await processNext(simulatorId);
-      await loadQueues();
-    } catch (error) {
-      console.error("Error processing next:", error);
-    }
-  };
-
   const handleConfirmTurn = async (queueId: number) => {
     try {
       await confirmTurn(queueId);
@@ -234,6 +292,41 @@ export default function Seller() {
       await loadQueues();
     } catch (error) {
       console.error("Error handling missed turn:", error);
+    }
+  };
+
+  const [movingPlayer, setMovingPlayer] = useState<number | null>(null);
+
+  const handleMovePlayer = async (queueId: number, direction: 'up' | 'down') => {
+    if (movingPlayer) return;
+    setMovingPlayer(queueId);
+    
+    try {
+      const simulatorId = Object.keys(activeItems).find(id => 
+        activeItems[parseInt(id)]?.some(item => item.id === queueId)
+      );
+      
+      if (!simulatorId) return;
+      
+      const queueItems = activeItems[parseInt(simulatorId)] || [];
+      const waitingPlayers = queueItems
+        .filter(item => item.status === 'WAITING')
+        .sort((a, b) => a.position - b.position);
+      
+      const currentIndex = waitingPlayers.findIndex(item => item.id === queueId);
+      if (currentIndex === -1) return;
+      
+      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (newIndex < 0 || newIndex >= waitingPlayers.length) return;
+      
+      const targetPlayer = waitingPlayers[newIndex];
+      
+      await movePlayer(queueId, targetPlayer.position);
+      await loadQueues();
+    } catch (error) {
+      console.error("Error moving player:", error);
+    } finally {
+      setMovingPlayer(null);
     }
   };
 
@@ -514,7 +607,13 @@ export default function Seller() {
           {queues.map((sim) => {
             const status = queueStatuses[sim.simulatorId];
             return (
-              <div key={sim.simulatorId} className="queue-card">
+              <div key={sim.simulatorId} className="queue-card" style={{ position: "relative" }}>
+                {(() => {
+                  const currentItem = activeItems[sim.simulatorId]?.find(
+                    (item) => item.status === "ACTIVE" || item.status === "CONFIRMED"
+                  );
+                  return currentItem && currentItem.status === "CONFIRMED" ? <F1Car isActive={true} /> : null;
+                })()}
                 <h3
                   style={{
                     display: "flex",
@@ -602,8 +701,11 @@ export default function Seller() {
                       (item) => item.status === "ACTIVE" || item.status === "CONFIRMED"
                     );
                     const queueItems = (sim.queue || []).slice();
-                    const currentPlayerInQueue = currentItem ? queueItems.find(q => q.player?.id === currentItem.player.id) : null;
-                    const nextPlayers = queueItems.filter(q => q.player?.id !== currentItem?.player.id);
+                    
+                    // Find current player either from activeItems or queueStatuses
+                    const currentPlayerId = currentItem?.player?.id || status?.currentPlayer?.id;
+                    const currentPlayerInQueue = currentPlayerId ? queueItems.find(q => q.player?.id === currentPlayerId) : null;
+                    const nextPlayers = queueItems.filter(q => q.player?.id !== currentPlayerId);
 
                     return (
                       <>
@@ -620,10 +722,10 @@ export default function Seller() {
                               justifyContent: "space-between",
                               alignItems: "center"
                             }}>
-                              <span style={{ color: "white" }}>{currentPlayerInQueue.player?.name ?? "Sem nome"}</span>
+                              <span style={{ color: "white" }}>{currentPlayerInQueue?.player?.name || currentItem?.player?.name || status?.currentPlayer?.name || "Sem nome"}</span>
                               <div style={{ display: "flex", gap: "0.5rem" }}>
                                 <button onClick={() => handleRemove(currentPlayerInQueue.id)} className="remove-button">Remover</button>
-                                {currentItem.status === "ACTIVE" && (
+                                {currentItem && currentItem.status === "ACTIVE" && (
                                   <button onClick={() => handleConfirmTurn(currentItem.id)} className="confirm-button">Confirmar</button>
                                 )}
                                 <button onClick={() => handleMissedTurn(sim.simulatorId)} className="missed-button">Próximo jogador</button>
@@ -648,7 +750,45 @@ export default function Seller() {
                                   alignItems: "center"
                                 }}>
                                   <span style={{ color: "white" }}>{index + 1}. {q.player?.name ?? "Sem nome"}</span>
-                                  <button onClick={() => handleRemove(q.id)} className="remove-button">Remover</button>
+                                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                    {nextPlayers.length >= 2 && (
+                                      <>
+                                        <button 
+                                          onClick={() => handleMovePlayer(q.id, 'up')}
+                                          disabled={index === 0}
+                                          style={{
+                                            padding: "0.25rem 0.5rem",
+                                            background: index === 0 ? "#666" : "#333",
+                                            color: "white",
+                                            border: "none",
+                                            borderRadius: "4px",
+                                            cursor: index === 0 ? "not-allowed" : "pointer",
+                                            fontSize: "0.8rem"
+                                          }}
+                                          title="Subir posição"
+                                        >
+                                          ↑
+                                        </button>
+                                        <button 
+                                          onClick={() => handleMovePlayer(q.id, 'down')}
+                                          disabled={index === nextPlayers.length - 1}
+                                          style={{
+                                            padding: "0.25rem 0.5rem",
+                                            background: index === nextPlayers.length - 1 ? "#666" : "#333",
+                                            color: "white",
+                                            border: "none",
+                                            borderRadius: "4px",
+                                            cursor: index === nextPlayers.length - 1 ? "not-allowed" : "pointer",
+                                            fontSize: "0.8rem"
+                                          }}
+                                          title="Descer posição"
+                                        >
+                                          ↓
+                                        </button>
+                                      </>
+                                    )}
+                                    <button onClick={() => handleRemove(q.id)} className="remove-button">Remover</button>
+                                  </div>
                                 </li>
                               ))}
                             </ul>

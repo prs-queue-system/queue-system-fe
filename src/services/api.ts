@@ -1,50 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { ApiConfig } from "../config/api";
+import { ApiConfig } from "./config";
+import { sanitizeInput, validateId } from "../utils/validation";
+import type { Player, QueueItem, SimulatorQueue } from "../types";
 
-// HTML encoding for XSS prevention
-const sanitizeInput = (input: string): string => {
-  return input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;")
-    .replace(/\//g, "&#x2F;");
-};
-
-const validateId = (id: number): number => {
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new Error("Invalid ID provided");
-  }
-  return id;
-};
-
-// Types
-export type Player = {
-  id: number;
-  name: string;
-  email: string;
-  password?: string;
-  role: string;
-  phone?: string;
-  instagram?: string;
-  inQueue?: boolean;
-  sellerId?: number;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type QueueItem = {
-  id: number;
-  player: Player;
-};
-
-export type SimulatorQueue = {
-  simulatorId: number;
-  simulatorName: string;
-  queue: QueueItem[];
-};
+export type { Player, QueueItem, SimulatorQueue } from "../types";
 
 // Player API
 export async function fetchPlayers(): Promise<Player[]> {
@@ -277,24 +237,26 @@ export async function fetchAllQueues(): Promise<SimulatorQueue[]> {
       (sim: { id: number; name: string; Queue?: any[] }) => ({
         simulatorId: sim.id,
         simulatorName: sim.name,
-        queue: (sim.Queue || []).map((q: any) => {
-          const user = q.User || q.Player;
-          return {
-            id: q.id,
-            player: {
-              id: user?.id || q.playerId || q.userId,
-              name: user?.name || "Unknown",
-              email: user?.email || "",
-              role: user?.role || "PLAYER",
-              phone: user?.phone,
-              instagram: user?.instagram,
-              inQueue: user?.inQueue,
-              sellerId: user?.sellerId,
-              createdAt: user?.createdAt,
-              updatedAt: user?.updatedAt,
-            },
-          };
-        }),
+        queue: (sim.Queue || [])
+          .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
+          .map((q: any) => {
+            const user = q.User || q.Player;
+            return {
+              id: q.id,
+              player: {
+                id: user?.id || q.playerId || q.userId,
+                name: user?.name || "Unknown",
+                email: user?.email || "",
+                role: user?.role || "PLAYER",
+                phone: user?.phone,
+                instagram: user?.instagram,
+                inQueue: user?.inQueue,
+                sellerId: user?.sellerId,
+                createdAt: user?.createdAt,
+                updatedAt: user?.updatedAt,
+              },
+            };
+          }),
       })
     );
   } catch {
@@ -540,5 +502,20 @@ export async function deleteTimePattern(id: number) {
     if (!res.ok) throw new Error("Erro ao deletar padrão");
   } catch {
     throw new Error("Erro ao deletar padrão");
+  }
+}
+
+export async function movePlayer(queueId: number, newPosition: number) {
+  try {
+    const validQueueId = validateId(queueId);
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/queue/${validQueueId}/move`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPosition }),
+    });
+    if (!res.ok) throw new Error("Erro ao mover jogador");
+    return res.json();
+  } catch {
+    throw new Error("Erro ao mover jogador");
   }
 }

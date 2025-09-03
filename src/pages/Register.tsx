@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPlayer, checkEmailExists } from '../services/api';
-import './Register.css';
+import '../styles/pages/Register.css';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

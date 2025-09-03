@@ -23,16 +23,34 @@ A modern React-based queue management system for simulators with real-time updat
 ```
 src/
 ├── components/          # Reusable UI components
+│   ├── F1Car.tsx       # F1 racing car animation
 │   ├── Player.tsx      # Player management
 │   ├── Queue.tsx       # Queue display and controls
-│   ├── Queue.css       # Queue styling
-│   └── Simulators.tsx  # Simulator management
+│   ├── Simulators.tsx  # Simulator management
+│   ├── TimePatterns.tsx # Time pattern management
+│   └── UserManagement.tsx # User management
 ├── pages/              # Route-level pages
 │   ├── Admin.tsx       # Admin dashboard
+│   ├── Login.tsx       # User authentication
 │   ├── Register.tsx    # Player registration
-│   └── Register.css    # Registration styling
-├── services/           # API integration
-│   └── api.ts         # Backend API calls
+│   └── Seller.tsx      # Seller interface
+├── services/           # API integration and configuration
+│   ├── api.ts         # Backend API calls
+│   └── config.ts      # API configuration
+├── styles/             # Centralized styling
+│   ├── components/    # Component-specific styles
+│   │   ├── F1Car.css
+│   │   └── Queue.css
+│   ├── pages/         # Page-specific styles
+│   │   ├── Login.css
+│   │   ├── Register.css
+│   │   └── Seller.css
+│   ├── App.css        # Main app styles
+│   └── index.css      # Global styles
+├── types/              # TypeScript type definitions
+│   └── index.ts       # Centralized types
+├── utils/              # Utility functions
+│   └── validation.ts  # Input validation and sanitization
 └── App.tsx            # Main app with routing
 ```
 

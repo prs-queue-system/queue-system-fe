@@ -1,19 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState, useCallback } from "react";
 import {
   fetchAllQueues,
   createQueue,
   removePlayer,
   fetchPlayers,
-  startTimedQueue,
   getQueueStatus,
   processNext,
   confirmTurn,
-  handleMissed,
   fetchTimePatterns,
+  movePlayer,
   type Player,
   type SimulatorQueue,
 } from "../services/api";
-import "./Queue.css";
+import "../styles/components/Queue.css";
+import F1Car from "./F1Car";
 
 type QueueStatus = {
   isActive: boolean;
@@ -140,30 +141,75 @@ export default function Queue() {
 
     loadInitialData();
 
-    let interval: number;
-    const startPolling = () => {
-      interval = setInterval(() => {
-        if (!document.hidden) {
-          loadAllQueues();
+    // WebSocket connection with retry
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080';
+    let ws: WebSocket | null = null;
+    let reconnectAttempts = 0;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    
+    const connectWebSocket = () => {
+      try {
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          reconnectAttempts = 0;
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'QUEUE_UPDATE' || data.type === 'TIMED_QUEUE_UPDATE') {
+              loadAllQueues();
+            }
+            if (data.type === 'PLAYER_UPDATE') {
+              loadPlayers();
+            }
+          } catch (err) {
+            console.error('WebSocket message error:', err);
+          }
+        };
+        
+        ws.onerror = () => {
+          console.log('WebSocket error, falling back to polling');
+          if (!pollInterval) {
+            pollInterval = setInterval(() => {
+              if (!document.hidden) loadAllQueues();
+            }, 3000);
+          }
+        };
+        
+        ws.onclose = () => {
+          if (reconnectAttempts < 3) {
+            setTimeout(() => {
+              reconnectAttempts++;
+              connectWebSocket();
+            }, Math.pow(2, reconnectAttempts) * 1000);
+          } else if (!pollInterval) {
+            pollInterval = setInterval(() => {
+              if (!document.hidden) loadAllQueues();
+            }, 3000);
+          }
+        };
+      } catch (err) {
+        console.error('WebSocket connection failed:', err);
+        if (!pollInterval) {
+          pollInterval = setInterval(() => {
+            if (!document.hidden) loadAllQueues();
+          }, 3000);
         }
-      }, 5000);
-    };
-
-    startPolling();
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        clearInterval(interval);
-      } else {
-        startPolling();
       }
     };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    
+    connectWebSocket();
 
     return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (ws) ws.close();
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [loadAllQueues, loadPlayers, loadTimePatterns]);
 
@@ -217,27 +263,7 @@ export default function Queue() {
     }
   };
 
-  const handleStartTimed = async (simulatorId: number) => {
-    try {
-      await startTimedQueue(simulatorId);
-      await loadAllQueues();
-    } catch (err) {
-      setError(
-        "Funcionalidade de fila temporizada não disponível no servidor."
-      );
-      console.error("Error starting timed queue:", err);
-    }
-  };
 
-  const handleProcessNext = async (simulatorId: number) => {
-    try {
-      await processNext(simulatorId);
-      await loadAllQueues();
-    } catch (err) {
-      setError("Erro ao processar próximo jogador.");
-      console.error("Error processing next:", err);
-    }
-  };
 
   const handleConfirmTurn = async (queueId: number) => {
     try {
@@ -256,6 +282,26 @@ export default function Queue() {
     } catch (err) {
       setError("Erro ao processar turno perdido.");
       console.error("Error handling missed turn:", err);
+    }
+  };
+
+  const handleMovePlayer = async (queueId: number, direction: 'up' | 'down') => {
+    const simulator = allQueues.find(q => q.queue.some(item => item.id === queueId));
+    if (!simulator) return;
+    
+    const currentIndex = simulator.queue.findIndex(q => q.id === queueId);
+    if (currentIndex === -1) return;
+    
+    const newPosition = direction === 'up' ? currentIndex : currentIndex + 2;
+    
+    if (newPosition < 1 || newPosition > simulator.queue.length) return;
+    
+    try {
+      await movePlayer(queueId, newPosition);
+      await loadAllQueues();
+    } catch (err) {
+      setError("Erro ao mover jogador.");
+      console.error("Error moving player:", err);
     }
   };
 
@@ -357,7 +403,11 @@ export default function Queue() {
         {allQueues.map((sim) => {
           const status = queueStatuses[sim.simulatorId];
           return (
-            <div key={sim.simulatorId} className="queue-card">
+            <div key={sim.simulatorId} className="queue-card" style={{ position: "relative" }}>
+              {(() => {
+                const currentItem = getCurrentActiveItem(activeItems[sim.simulatorId]);
+                return currentItem && currentItem.status === "CONFIRMED" ? <F1Car isActive={true} /> : null;
+              })()}
               <h3
                 style={{
                   display: "flex",
@@ -470,8 +520,8 @@ export default function Queue() {
                             <span style={{ color: "white" }}>{currentPlayerInQueue.player?.name ?? "Sem nome"}</span>
                             <div style={{ display: "flex", gap: "0.5rem" }}>
                               <button onClick={() => handleRemove(currentPlayerInQueue.id)} className="remove-button">Remover</button>
-                              {currentItem.status === "ACTIVE" && (
-                                <button onClick={() => handleConfirmTurn(currentItem.id)} className="confirm-button">Confirmar</button>
+                              {currentItem?.status === "ACTIVE" && (
+                                <button onClick={() => handleConfirmTurn(currentItem!.id)} className="confirm-button">Confirmar</button>
                               )}
                               <button onClick={() => handleMissedTurn(sim.simulatorId)} className="missed-button">Próximo jogador</button>
                             </div>
@@ -495,7 +545,45 @@ export default function Queue() {
                                 alignItems: "center"
                               }}>
                                 <span style={{ color: "white" }}>{index + 1}. {q.player?.name ?? "Sem nome"}</span>
-                                <button onClick={() => handleRemove(q.id)} className="remove-button">Remover</button>
+                                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                  {nextPlayers.length >= 2 && (
+                                    <>
+                                      <button 
+                                        onClick={() => handleMovePlayer(q.id, 'up')}
+                                        disabled={index === 0}
+                                        style={{
+                                          padding: "0.25rem 0.5rem",
+                                          background: index === 0 ? "#666" : "#333",
+                                          color: "white",
+                                          border: "none",
+                                          borderRadius: "4px",
+                                          cursor: index === 0 ? "not-allowed" : "pointer",
+                                          fontSize: "0.8rem"
+                                        }}
+                                        title="Subir posição"
+                                      >
+                                        ↑
+                                      </button>
+                                      <button 
+                                        onClick={() => handleMovePlayer(q.id, 'down')}
+                                        disabled={index === nextPlayers.length - 1}
+                                        style={{
+                                          padding: "0.25rem 0.5rem",
+                                          background: index === nextPlayers.length - 1 ? "#666" : "#333",
+                                          color: "white",
+                                          border: "none",
+                                          borderRadius: "4px",
+                                          cursor: index === nextPlayers.length - 1 ? "not-allowed" : "pointer",
+                                          fontSize: "0.8rem"
+                                        }}
+                                        title="Descer posição"
+                                      >
+                                        ↓
+                                      </button>
+                                    </>
+                                  )}
+                                  <button onClick={() => handleRemove(q.id)} className="remove-button">Remover</button>
+                                </div>
                               </li>
                             ))}
                           </ul>

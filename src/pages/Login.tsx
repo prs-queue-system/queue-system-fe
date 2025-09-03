@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { login } from "../services/api";
-import "./Login.css";
+import "../styles/pages/Login.css";
 
 export default function Login() {
   const [formData, setFormData] = useState({

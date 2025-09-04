@@ -13,6 +13,8 @@ import {
   type Player,
   type SimulatorQueue,
 } from "../services/api";
+import { acLauncherManager } from "../services/acLauncher";
+import type { ACPlayerData } from "../types";
 import "../styles/components/Queue.css";
 import F1Car from "./F1Car";
 
@@ -127,11 +129,75 @@ export default function Queue() {
     }
   }, []);
 
+  // AC Launcher Integration Functions
+  const initializeACLaunchers = useCallback(async () => {
+    const connections: Record<string, boolean> = {};
+    
+    for (const queue of allQueues) {
+      if (queue.pcIp) {
+        try {
+          const launcher = acLauncherManager.addLauncher(queue.pcIp);
+          const connected = await launcher.connect();
+          connections[queue.pcIp] = connected;
+          
+          if (connected) {
+            console.log(`AC Launcher connected for simulator ${queue.simulatorName} at ${queue.pcIp}`);
+          }
+        } catch (error) {
+          console.error(`Failed to connect AC Launcher for ${queue.simulatorName}:`, error);
+          connections[queue.pcIp] = false;
+        }
+      }
+    }
+  }, [allQueues]);
+
+  const setupACSession = useCallback(async (simulatorQueue: SimulatorQueue, player: Player): Promise<boolean> => {
+    if (!simulatorQueue.pcIp) {
+      console.log(`No PC IP configured for simulator ${simulatorQueue.simulatorName}`);
+      return true; // Continue without AC Launcher
+    }
+
+    const launcher = acLauncherManager.getLauncher(simulatorQueue.pcIp);
+    if (!launcher) {
+      console.error(`AC Launcher not found for ${simulatorQueue.pcIp}`);
+      return false;
+    }
+
+    try {
+      // Setup AC session with player data
+      const playerData: ACPlayerData = {
+        name: player.name,
+        carId: 'default_car', // TODO: Make this configurable per simulator
+        trackId: 'default_track', // TODO: Make this configurable per simulator
+        difficulty: player.skillLevel || 'gamer'
+      };
+
+      const success = await launcher.setupSession(playerData);
+      if (success) {
+        console.log(`AC session setup successful for ${player.name} on ${simulatorQueue.simulatorName}`);
+        // Start the race
+        launcher.startRace();
+        return true;
+      } else {
+        console.error(`Failed to setup AC session for ${player.name}`);
+        return false;
+      }
+    } catch (error) {
+      console.error(`Error setting up AC session:`, error);
+      return false;
+    }
+  }, []);
+
+
+
   useEffect(() => {
     const loadInitialData = async () => {
       setLoading(true);
       try {
         await Promise.all([loadAllQueues(), loadPlayers(), loadTimePatterns()]);
+        
+        // Initialize AC Launcher connections for simulators with PC IPs
+        initializeACLaunchers();
       } catch (err) {
         console.error("Error loading initial data:", err);
       } finally {
@@ -267,6 +333,31 @@ export default function Queue() {
 
   const handleConfirmTurn = async (queueId: number) => {
     try {
+      // Find the current active item and simulator
+      let currentPlayer: Player | undefined;
+      let simulatorWithPcIp: SimulatorQueue | undefined;
+      
+      for (const sim of allQueues) {
+        const activeItemsForSim = activeItems[sim.simulatorId] || [];
+        const activeItem = activeItemsForSim.find(item => item.id === queueId);
+        if (activeItem) {
+          currentPlayer = activeItem.player;
+          simulatorWithPcIp = sim;
+          break;
+        }
+      }
+
+      // Setup AC Launcher session if simulator has PC IP and player is found
+      if (simulatorWithPcIp?.pcIp && currentPlayer) {
+        try {
+          await setupACSession(simulatorWithPcIp, currentPlayer);
+          console.log(`AC session setup completed for ${currentPlayer.name} on ${simulatorWithPcIp.pcIp}`);
+        } catch (acError) {
+          console.warn(`AC Launcher setup failed for ${simulatorWithPcIp.pcIp}:`, acError);
+          // Continue with turn confirmation even if AC setup fails
+        }
+      }
+
       await confirmTurn(queueId);
       await loadAllQueues();
     } catch (err) {

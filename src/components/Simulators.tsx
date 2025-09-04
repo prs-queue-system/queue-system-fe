@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   fetchSimulators,
   createSimulator,
+  updateSimulator,
   deleteSimulator,
 } from "../services/api";
 
@@ -10,11 +11,15 @@ type Simulator = {
   id: number;
   name: string;
   active: boolean;
+  pcIp?: string;
 };
 
 export default function Simulators() {
   const [simulators, setSimulators] = useState<Simulator[]>([]);
   const [newName, setNewName] = useState("");
+  const [newPcIp, setNewPcIp] = useState("");
+  const [editingSimulator, setEditingSimulator] = useState<number | null>(null);
+  const [editPcIp, setEditPcIp] = useState("");
 
   const loadSimulators = useCallback(async () => {
     try {
@@ -31,8 +36,9 @@ export default function Simulators() {
   const handleCreate = async () => {
     if (!newName.trim()) return;
     try {
-      await createSimulator(newName);
+      await createSimulator(newName, newPcIp.trim() || undefined);
       setNewName("");
+      setNewPcIp("");
       loadSimulators();
     } catch (error) {
       console.error(
@@ -62,52 +68,95 @@ export default function Simulators() {
   }, []);
 
   const handleToggleActive = async (id: number, currentActive: boolean) => {
-    // TODO: Add API call to update simulator active status
-    console.log("Toggle simulator", {
-      id: Number(id),
-      newState: !currentActive,
-    });
-    // For now, just update local state
-    setSimulators((prev) =>
-      prev.map((sim) =>
-        sim.id === id ? { ...sim, active: !currentActive } : sim
-      )
-    );
+    try {
+      await updateSimulator(id, { active: !currentActive });
+      setSimulators((prev) =>
+        prev.map((sim) =>
+          sim.id === id ? { ...sim, active: !currentActive } : sim
+        )
+      );
+    } catch (error) {
+      console.error("Error updating simulator status:", error);
+    }
+  };
+
+  const handleEditPcIp = (simulatorId: number, currentPcIp: string) => {
+    setEditingSimulator(simulatorId);
+    setEditPcIp(currentPcIp || "");
+  };
+
+  const handleSavePcIp = async (simulatorId: number) => {
+    try {
+      await updateSimulator(simulatorId, { pcIp: editPcIp.trim() || undefined });
+      setSimulators((prev) =>
+        prev.map((sim) =>
+          sim.id === simulatorId ? { ...sim, pcIp: editPcIp.trim() || undefined } : sim
+        )
+      );
+      setEditingSimulator(null);
+      setEditPcIp("");
+    } catch (error) {
+      console.error("Error updating PC IP:", error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSimulator(null);
+    setEditPcIp("");
   };
 
   return (
     <div>
       <h2 style={{ color: "white", marginBottom: "2rem" }}>Simuladores</h2>
 
-      <div style={{ marginBottom: "2rem", display: "flex", gap: "0.5rem" }}>
-        <input
-          type="text"
-          placeholder="Nome do simulador"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          style={{
-            padding: "0.5rem",
-            border: "2px solid #333",
-            borderRadius: "8px",
-            background: "#000",
-            color: "white",
-            flex: 1,
-          }}
-        />
-        <button
-          onClick={handleCreate}
-          disabled={!newName.trim()}
-          style={{
-            padding: "0.5rem 1rem",
-            background: !newName.trim() ? "#666" : "#dc2626",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: !newName.trim() ? "not-allowed" : "pointer",
-          }}
-        >
-          Criar
-        </button>
+      <div style={{ marginBottom: "2rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+          <input
+            type="text"
+            placeholder="Nome do simulador"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            style={{
+              padding: "0.5rem",
+              border: "2px solid #333",
+              borderRadius: "8px",
+              background: "#000",
+              color: "white",
+              flex: 1,
+            }}
+          />
+          <input
+            type="text"
+            placeholder="IP do PC (ex: 192.168.1.100)"
+            value={newPcIp}
+            onChange={(e) => setNewPcIp(e.target.value)}
+            style={{
+              padding: "0.5rem",
+              border: "2px solid #333",
+              borderRadius: "8px",
+              background: "#000",
+              color: "white",
+              flex: 1,
+            }}
+          />
+          <button
+            onClick={handleCreate}
+            disabled={!newName.trim()}
+            style={{
+              padding: "0.5rem 1rem",
+              background: !newName.trim() ? "#666" : "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: !newName.trim() ? "not-allowed" : "pointer",
+            }}
+          >
+            Criar
+          </button>
+        </div>
+        <p style={{ color: "#666", fontSize: "0.9rem", margin: 0 }}>
+          💡 O IP do PC é usado para conectar ao AC Launcher na porta 8090. Deixe em branco se não usar AC Launcher.
+        </p>
       </div>
 
       <div
@@ -146,6 +195,71 @@ export default function Simulators() {
                 <p style={{ color: "#666", margin: 0, fontSize: "0.9rem" }}>
                   ID: {s.id}
                 </p>
+                <div style={{ marginTop: "0.5rem" }}>
+                  {editingSimulator === s.id ? (
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                      <input
+                        type="text"
+                        value={editPcIp}
+                        onChange={(e) => setEditPcIp(e.target.value)}
+                        placeholder="IP do PC"
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          border: "1px solid #333",
+                          borderRadius: "4px",
+                          background: "#000",
+                          color: "white",
+                          fontSize: "0.8rem",
+                          flex: 1,
+                        }}
+                      />
+                      <button
+                        onClick={() => handleSavePcIp(s.id)}
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          background: "#4caf50",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          fontSize: "0.8rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          background: "#666",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          fontSize: "0.8rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => handleEditPcIp(s.id, s.pcIp || "")}
+                    >
+                      <span style={{ color: "#888", fontSize: "0.8rem" }}>🖥️</span>
+                      <span style={{ color: s.pcIp ? "#4caf50" : "#666", fontSize: "0.8rem" }}>
+                        {s.pcIp || "Sem AC Launcher"}
+                      </span>
+                      <span style={{ color: "#666", fontSize: "0.7rem" }}>✏️</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

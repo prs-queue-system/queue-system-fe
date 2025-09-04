@@ -8,6 +8,7 @@ A modern React-based queue management system for simulators with real-time updat
 - **Queue Management**: Add/remove players from simulator queues
 - **Timed Queues**: Automatic queue progression with configurable time limits
 - **Real-time Updates**: Live queue status and player positions
+- **AC Launcher Integration**: WebSocket-based communication with Assetto Corsa for automated game session management
 - **Admin Panel**: Complete management interface for queues, players, and simulators
 - **Modern UI**: Dark theme with red accents, optimized for desktop
 
@@ -17,6 +18,7 @@ A modern React-based queue management system for simulators with real-time updat
 - **Routing**: React Router DOM
 - **Styling**: CSS3 with modern design patterns
 - **API**: RESTful backend integration
+- **WebSocket**: Real-time communication with AC Launcher (port 8090)
 
 ## Project Structure
 
@@ -35,6 +37,7 @@ src/
 │   ├── Register.tsx    # Player registration
 │   └── Seller.tsx      # Seller interface
 ├── services/           # API integration and configuration
+│   ├── acLauncher.ts  # AC Launcher WebSocket service
 │   ├── api.ts         # Backend API calls
 │   └── config.ts      # API configuration
 ├── styles/             # Centralized styling
@@ -127,6 +130,15 @@ The frontend expects a REST API with the following endpoints:
 - Confirm/missed turn handling with proper status management
 - Live countdown display in MM:SS format
 - Automatic queue progression after turn completion
+
+### AC Launcher Integration
+- **WebSocket Communication**: Direct connection to AC Launcher on port 8090
+- **Automated Game Setup**: Automatic player, car, and track configuration
+- **Session Management**: Start/stop game sessions programmatically
+- **Real-time Status**: Monitor AC game status and connection health
+- **Protocol Support**: Full AC communication protocol implementation (setplayer, setcar, settrack, start, isacactive)
+- **PC IP Management**: Configure simulator PC IP addresses for LAN communication
+- **Error Handling**: Robust connection management with automatic reconnection
 
 ### Admin Dashboard
 - Complete system overview with simulator management

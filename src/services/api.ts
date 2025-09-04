@@ -144,20 +144,51 @@ export async function fetchSimulators(): Promise<any[]> {
   }
 }
 
-export async function createSimulator(name: string) {
+export async function createSimulator(name: string, pcIp?: string) {
   try {
     // Sanitize input to prevent XSS
     const sanitizedName = sanitizeInput(name);
+    const sanitizedPcIp = pcIp ? sanitizeInput(pcIp) : undefined;
 
     const res = await fetch(`${ApiConfig.getBaseUrl()}/simulators`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: sanitizedName }),
+      body: JSON.stringify({ 
+        name: sanitizedName,
+        ...(sanitizedPcIp && { pcIp: sanitizedPcIp })
+      }),
     });
     if (!res.ok) throw new Error("Erro ao criar simulador");
     return res.json();
   } catch {
     throw new Error("Erro ao criar simulador");
+  }
+}
+
+export async function updateSimulator(id: number, updates: { name?: string; pcIp?: string; active?: boolean }) {
+  try {
+    const validId = validateId(id);
+    const sanitizedUpdates: any = {};
+    
+    if (updates.name !== undefined) {
+      sanitizedUpdates.name = sanitizeInput(updates.name);
+    }
+    if (updates.pcIp !== undefined) {
+      sanitizedUpdates.pcIp = updates.pcIp ? sanitizeInput(updates.pcIp) : null;
+    }
+    if (updates.active !== undefined) {
+      sanitizedUpdates.active = updates.active;
+    }
+
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/simulators/${validId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sanitizedUpdates),
+    });
+    if (!res.ok) throw new Error("Erro ao atualizar simulador");
+    return res.json();
+  } catch {
+    throw new Error("Erro ao atualizar simulador");
   }
 }
 

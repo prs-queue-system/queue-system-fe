@@ -279,6 +279,34 @@ export default function Queue() {
     };
   }, [loadAllQueues, loadPlayers, loadTimePatterns]);
 
+  // Timer to update time remaining every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveItems(prevActiveItems => {
+        const updatedActiveItems = { ...prevActiveItems };
+        let hasChanges = false;
+
+        Object.keys(updatedActiveItems).forEach((simulatorId: string) => {
+           const items = updatedActiveItems[parseInt(simulatorId)];
+           if (items && items.length > 0) {
+             const updatedItems = items.map((item: ActiveQueueItem) => {
+               if ((item.status === 'ACTIVE' || item.status === 'CONFIRMED') && item.timeLeft > 0) {
+                 hasChanges = true;
+                 return { ...item, timeLeft: Math.max(0, item.timeLeft - 1000) };
+               }
+               return item;
+             });
+             updatedActiveItems[parseInt(simulatorId)] = updatedItems;
+           }
+         });
+
+        return hasChanges ? updatedActiveItems : prevActiveItems;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const handleAdd = async (simulatorId: number) => {
     if (selectedPlayerId === null) return;
     const selectedPlayer = players.find((p) => p.id === selectedPlayerId);

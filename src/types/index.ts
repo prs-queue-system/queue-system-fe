@@ -103,3 +103,19 @@ export type ACPlayerData = {
   difficulty: 'gamer' | 'racer' | 'pro';
   gameMode?: 'practice' | 'race' | 'hotlap';
 };
+
+// Car and Track Configuration Types
+export type CarConfiguration = {
+  id: string;
+  name: string;
+  brand: string;
+  category: string;
+};
+
+export type TrackConfiguration = {
+  id: string;
+  name: string;
+  country: string;
+  length: number;
+  layout: string;
+};

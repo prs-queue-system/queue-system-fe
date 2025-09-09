@@ -678,3 +678,49 @@ export function clearSimulatorCache(pcIp?: string): void {
     });
   }
 }
+
+// System Info API Functions
+export async function fetchSystemInfo(): Promise<any> {
+  const response = await fetch(`${ApiConfig.getBaseUrl()}/system-info`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch system info: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchSystemInfoByPcIp(pcIp: string): Promise<any> {
+  const response = await fetch(`${ApiConfig.getBaseUrl()}/system-info/${encodeURIComponent(pcIp)}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch system info for PC ${pcIp}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchACLauncherStatus(pcIp: string): Promise<any> {
+  const response = await fetch(`${ApiConfig.getBaseUrl()}/ac-launcher-status/${encodeURIComponent(pcIp)}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch AC Launcher status for PC ${pcIp}: ${response.statusText}`);
+  }
+
+  return response.json();
+}

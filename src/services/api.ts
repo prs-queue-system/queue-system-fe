@@ -2,9 +2,9 @@
 
 import { ApiConfig } from "./config";
 import { sanitizeInput, validateId } from "../utils/validation";
-import type { Player, QueueItem, SimulatorQueue } from "../types";
+import type { Player, QueueItem, SimulatorQueue, CarConfiguration, TrackConfiguration } from "../types";
 
-export type { Player, QueueItem, SimulatorQueue } from "../types";
+export type { Player, QueueItem, SimulatorQueue, CarConfiguration, TrackConfiguration } from "../types";
 
 // Player API
 export async function fetchPlayers(): Promise<Player[]> {
@@ -165,7 +165,7 @@ export async function createSimulator(name: string, pcIp?: string) {
   }
 }
 
-export async function updateSimulator(id: number, updates: { name?: string; pcIp?: string; active?: boolean }) {
+export async function updateSimulator(id: number, updates: { name?: string; pcIp?: string; active?: boolean; defaultCar?: string; defaultTrack?: string }) {
   try {
     const validId = validateId(id);
     const sanitizedUpdates: any = {};
@@ -179,15 +179,27 @@ export async function updateSimulator(id: number, updates: { name?: string; pcIp
     if (updates.active !== undefined) {
       sanitizedUpdates.active = updates.active;
     }
+    if (updates.defaultCar !== undefined) {
+      sanitizedUpdates.defaultCar = updates.defaultCar ? sanitizeInput(updates.defaultCar) : null;
+    }
+    if (updates.defaultTrack !== undefined) {
+      sanitizedUpdates.defaultTrack = updates.defaultTrack ? sanitizeInput(updates.defaultTrack) : null;
+    }
 
     const res = await fetch(`${ApiConfig.getBaseUrl()}/simulators/${validId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(sanitizedUpdates),
     });
-    if (!res.ok) throw new Error("Erro ao atualizar simulador");
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Erro ao atualizar simulador: ${res.status} - ${errorText}`);
+    }
     return res.json();
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Erro ao atualizar simulador");
   }
 }
@@ -548,5 +560,121 @@ export async function movePlayer(queueId: number, newPosition: number) {
     return res.json();
   } catch {
     throw new Error("Erro ao mover jogador");
+  }
+}
+
+// Car and Track API Functions
+export async function fetchCars(): Promise<CarConfiguration[]> {
+  try {
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/api/ac-launcher/cars`);
+    if (!res.ok) throw new Error("Erro ao buscar carros");
+    return res.json();
+  } catch {
+    throw new Error("Erro ao buscar carros");
+  }
+}
+
+export async function fetchTracks(): Promise<TrackConfiguration[]> {
+  try {
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/api/ac-launcher/tracks`);
+    if (!res.ok) throw new Error("Erro ao buscar pistas");
+    return res.json();
+  } catch {
+    throw new Error("Erro ao buscar pistas");
+  }
+}
+
+export async function fetchSimulatorCars(pcIp: string): Promise<CarConfiguration[]> {
+  const cacheKey = `simulator_cars_${pcIp}`;
+  const cachedData = localStorage.getItem(cacheKey);
+  
+  if (cachedData) {
+    try {
+      return JSON.parse(cachedData);
+    } catch {
+      localStorage.removeItem(cacheKey);
+    }
+  }
+  
+  try {
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/ac-launcher/simulator/${pcIp}/cars`);
+    if (!res.ok) throw new Error("Erro ao buscar carros do simulador");
+    const data = await res.json();
+    if (data.success && data.data.cars) {
+      const cars = data.data.cars.map((carId: string) => ({
+        id: carId,
+        name: carId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        brand: carId.split('_')[0].replace(/\b\w/g, l => l.toUpperCase()),
+        category: "Racing",
+        power: 400
+      }));
+      localStorage.setItem(cacheKey, JSON.stringify(cars));
+      return cars;
+    }
+    throw new Error("Formato de resposta inválido");
+  } catch {
+    throw new Error("Erro ao buscar carros do simulador");
+  }
+}
+
+export async function fetchSimulatorTracks(pcIp: string): Promise<TrackConfiguration[]> {
+  const cacheKey = `simulator_tracks_${pcIp}`;
+  const cachedData = localStorage.getItem(cacheKey);
+  
+  if (cachedData) {
+    try {
+      return JSON.parse(cachedData);
+    } catch {
+      localStorage.removeItem(cacheKey);
+    }
+  }
+  
+  try {
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/ac-launcher/simulator/${pcIp}/tracks`);
+    if (!res.ok) throw new Error("Erro ao buscar pistas do simulador");
+    const data = await res.json();
+    if (data.success && data.data.tracks) {
+      const tracks = data.data.tracks.map((track: any) => ({
+        id: track.id,
+        name: track.name,
+        country: "Unknown",
+        layout: "Default",
+        length: 5000
+      }));
+      localStorage.setItem(cacheKey, JSON.stringify(tracks));
+      return tracks;
+    }
+    throw new Error("Formato de resposta inválido");
+  } catch {
+    throw new Error("Erro ao buscar pistas do simulador");
+  }
+}
+
+export async function fetchSimulatorContent(pcIp: string): Promise<{ cars: CarConfiguration[], tracks: TrackConfiguration[] }> {
+  try {
+    const [cars, tracks] = await Promise.all([
+      fetchSimulatorCars(pcIp),
+      fetchSimulatorTracks(pcIp)
+    ]);
+    
+    return { cars, tracks };
+  } catch {
+    throw new Error("Erro ao buscar conteúdo do simulador");
+  }
+}
+
+// Utility function to clear simulator cache
+export function clearSimulatorCache(pcIp?: string): void {
+  if (pcIp) {
+    localStorage.removeItem(`simulator_cars_${pcIp}`);
+    localStorage.removeItem(`simulator_tracks_${pcIp}`);
+  } else {
+    // Clear all simulator cache
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('simulator_cars_') || key.startsWith('simulator_tracks_')) {
+        localStorage.removeItem(key);
+      }
+    });
   }
 }

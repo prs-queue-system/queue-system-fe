@@ -29,8 +29,6 @@ export default function Simulators() {
   const [editPcIp, setEditPcIp] = useState("");
 
   // Car and Track Selection State
-  const [selectedCar, setSelectedCar] = useState<CarConfiguration | null>(null);
-  const [selectedTrack, setSelectedTrack] = useState<TrackConfiguration | null>(null);
   const [showCarModal, setShowCarModal] = useState(false);
   const [showTrackModal, setShowTrackModal] = useState(false);
   const [editingCarForSimulator, setEditingCarForSimulator] = useState<number | null>(null);
@@ -93,8 +91,6 @@ export default function Simulators() {
       await createSimulator(newName, newPcIp.trim() || undefined);
       setNewName("");
       setNewPcIp("");
-      setSelectedCar(null);
-      setSelectedTrack(null);
       loadSimulators();
     } catch (error) {
       console.error(

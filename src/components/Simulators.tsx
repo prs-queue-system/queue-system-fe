@@ -1,17 +1,24 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useCallback } from "react";
 import {
   fetchSimulators,
   createSimulator,
   updateSimulator,
   deleteSimulator,
+  fetchSimulatorCars,
+  fetchSimulatorTracks,
 } from "../services/api";
+import type { CarConfiguration, TrackConfiguration } from "../types";
+import CarSelectionModal from "./CarSelectionModal";
+import TrackSelectionModal from "./TrackSelectionModal";
+import "../styles/components/Modal.css";
 
 type Simulator = {
   id: number;
   name: string;
   active: boolean;
   pcIp?: string;
+  defaultCar?: string;
+  defaultTrack?: string;
 };
 
 export default function Simulators() {
@@ -21,10 +28,51 @@ export default function Simulators() {
   const [editingSimulator, setEditingSimulator] = useState<number | null>(null);
   const [editPcIp, setEditPcIp] = useState("");
 
+  // Car and Track Selection State
+  const [selectedCar, setSelectedCar] = useState<CarConfiguration | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<TrackConfiguration | null>(null);
+  const [showCarModal, setShowCarModal] = useState(false);
+  const [showTrackModal, setShowTrackModal] = useState(false);
+  const [editingCarForSimulator, setEditingCarForSimulator] = useState<number | null>(null);
+  const [editingTrackForSimulator, setEditingTrackForSimulator] = useState<number | null>(null);
+  const [simulatorCars, setSimulatorCars] = useState<Record<number, CarConfiguration>>({});
+  const [simulatorTracks, setSimulatorTracks] = useState<Record<number, TrackConfiguration>>({});
+
   const loadSimulators = useCallback(async () => {
     try {
-      const simulatorsList = await fetchSimulators();
-      setSimulators(simulatorsList);
+      const data = await fetchSimulators();
+      setSimulators(data);
+      
+      // Load car and track configurations for simulators that have defaults
+      const carsToLoad: Record<number, CarConfiguration> = {};
+      const tracksToLoad: Record<number, TrackConfiguration> = {};
+      
+      for (const simulator of data) {
+        if (simulator.pcIp) {
+          try {
+            if (simulator.defaultCar) {
+              const cars = await fetchSimulatorCars(simulator.pcIp);
+              const car = cars.find(c => c.id === simulator.defaultCar);
+              if (car) {
+                carsToLoad[simulator.id] = car;
+              }
+            }
+            
+            if (simulator.defaultTrack) {
+              const tracks = await fetchSimulatorTracks(simulator.pcIp);
+              const track = tracks.find(t => t.id === simulator.defaultTrack);
+              if (track) {
+                tracksToLoad[simulator.id] = track;
+              }
+            }
+          } catch (error) {
+            console.error(`Error loading configurations for simulator ${simulator.id}:`, error);
+          }
+        }
+      }
+      
+      setSimulatorCars(prev => ({ ...prev, ...carsToLoad }));
+      setSimulatorTracks(prev => ({ ...prev, ...tracksToLoad }));
     } catch (error) {
       console.error(
         "Error loading simulators:",
@@ -33,12 +81,20 @@ export default function Simulators() {
     }
   }, []);
 
+  useEffect(() => {
+    loadSimulators();
+    const interval = setInterval(loadSimulators, 5000);
+    return () => clearInterval(interval);
+  }, [loadSimulators]);
+
   const handleCreate = async () => {
     if (!newName.trim()) return;
     try {
       await createSimulator(newName, newPcIp.trim() || undefined);
       setNewName("");
       setNewPcIp("");
+      setSelectedCar(null);
+      setSelectedTrack(null);
       loadSimulators();
     } catch (error) {
       console.error(
@@ -46,6 +102,49 @@ export default function Simulators() {
         error instanceof Error ? error.message : "Unknown error"
       );
     }
+  };
+
+  // Car and Track Selection Handlers
+  const handleCarSelection = (simulatorId: number) => {
+    setEditingCarForSimulator(simulatorId);
+    setShowCarModal(true);
+  };
+
+  const handleTrackSelection = (simulatorId: number) => {
+    setEditingTrackForSimulator(simulatorId);
+    setShowTrackModal(true);
+  };
+
+  const handleCarSelect = async (car: CarConfiguration) => {
+    if (editingCarForSimulator !== null) {
+      try {
+        await updateSimulator(editingCarForSimulator, { defaultCar: car.id });
+        setSimulatorCars(prev => ({ ...prev, [editingCarForSimulator]: car }));
+        setSimulators(prev => prev.map(sim => 
+          sim.id === editingCarForSimulator ? { ...sim, defaultCar: car.id } : sim
+        ));
+      } catch (error) {
+        console.error("Error updating simulator car:", error);
+      }
+    }
+    setEditingCarForSimulator(null);
+    setShowCarModal(false);
+  };
+
+  const handleTrackSelect = async (track: TrackConfiguration) => {
+    if (editingTrackForSimulator !== null) {
+      try {
+        await updateSimulator(editingTrackForSimulator, { defaultTrack: track.id });
+        setSimulatorTracks(prev => ({ ...prev, [editingTrackForSimulator]: track }));
+        setSimulators(prev => prev.map(sim => 
+          sim.id === editingTrackForSimulator ? { ...sim, defaultTrack: track.id } : sim
+        ));
+      } catch (error) {
+        console.error("Error updating simulator track:", error);
+      }
+    }
+    setEditingTrackForSimulator(null);
+    setShowTrackModal(false);
   };
 
   const handleDelete = async (id: number) => {
@@ -60,13 +159,6 @@ export default function Simulators() {
     }
   };
 
-  useEffect(() => {
-    loadSimulators();
-    const interval = setInterval(loadSimulators, 10000);
-    return () => clearInterval(interval);
-    // amazonq-ignore-next-line
-  }, []);
-
   const handleToggleActive = async (id: number, currentActive: boolean) => {
     try {
       await updateSimulator(id, { active: !currentActive });
@@ -76,7 +168,10 @@ export default function Simulators() {
         )
       );
     } catch (error) {
-      console.error("Error updating simulator status:", error);
+      console.error(
+        "Error toggling simulator:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
     }
   };
 
@@ -260,6 +355,32 @@ export default function Simulators() {
                     </div>
                   )}
                 </div>
+
+                <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <div
+                    className="selection-label"
+                    onClick={() => handleCarSelection(s.id)}
+                  >
+                    <span className="icon">🏎️</span>
+                    <span className="text">
+                      {simulatorCars[s.id]?.name || s.defaultCar || (
+                        <span className="placeholder">Selecionar carro</span>
+                      )}
+                    </span>
+                  </div>
+                  
+                  <div
+                    className="selection-label"
+                    onClick={() => handleTrackSelection(s.id)}
+                  >
+                    <span className="icon">🏁</span>
+                    <span className="text">
+                      {simulatorTracks[s.id]?.name || s.defaultTrack || (
+                        <span className="placeholder">Selecionar pista</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -321,6 +442,30 @@ export default function Simulators() {
           </div>
         ))}
       </div>
+
+      {showCarModal && (
+        <CarSelectionModal
+          isOpen={showCarModal}
+          onClose={() => {
+            setShowCarModal(false);
+            setEditingCarForSimulator(null);
+          }}
+          onSelect={handleCarSelect}
+          pcIp={editingCarForSimulator ? simulators.find(s => s.id === editingCarForSimulator)?.pcIp : null}
+        />
+      )}
+
+      {showTrackModal && (
+        <TrackSelectionModal
+          isOpen={showTrackModal}
+          onClose={() => {
+            setShowTrackModal(false);
+            setEditingTrackForSimulator(null);
+          }}
+          onSelect={handleTrackSelect}
+          pcIp={editingTrackForSimulator ? simulators.find(s => s.id === editingTrackForSimulator)?.pcIp : null}
+        />
+      )}
     </div>
   );
 }

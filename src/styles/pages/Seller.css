@@ -415,3 +415,79 @@
   word-break: break-all;
   color: #ccc;
 }
+
+@media (max-width: 768px) {
+  .seller-container {
+    padding: 1rem;
+  }
+
+  .queues-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .players-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+  
+  .search-input {
+    max-width: 100%;
+  }
+  
+  .queue-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .seller-container {
+    padding: 0.5rem;
+  }
+  
+  .seller-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .seller-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .search-input {
+    font-size: 0.9rem;
+    padding: 0.8rem;
+  }
+  
+  .players-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .player-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .select-button {
+    width: 100%;
+    padding: 0.8rem;
+  }
+
+  .queue-card {
+    padding: 1rem;
+    margin: 0;
+  }
+  
+  .queue-card h3 {
+    font-size: 1.2rem;
+  }
+
+  .qr-popup {
+    width: 95%;
+    padding: 1rem;
+    margin: 0.5rem;
+  }
+}

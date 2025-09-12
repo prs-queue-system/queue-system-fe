@@ -50,21 +50,18 @@ export default function Login() {
     <div className="login-container">
       <div className="login-card">
         <div className="logo-container">
-          <div
-            style={{
-              width: "300px",
-              height: "82px",
-              backgroundImage:
-                'url("https://loja.prsim.com.br/wp-content/uploads/2025/04/prs-preto-branco-vermelho-300x82.png")',
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 2rem auto",
-            }}
-          ></div>
+          <div className="logo-placeholder">
+            <img 
+              src="https://loja.prsim.com.br/wp-content/uploads/2025/04/prs-preto-branco-vermelho-300x82.png" 
+              alt="Formula Max Logo" 
+              className="logo-image"
+            />
+            {/* Replace '/path/to/your/logo.png' with your actual image URL or path */}
+          </div>
         </div>
 
-        <h1>Login do Sistema</h1>
+        <h1>Entre em sua conta</h1>
+        <p style={{color: '#888', textAlign: 'center', marginBottom: '1.5rem', fontSize: '0.9rem'}}>Faça login para acessar sua conta e aproveitar nossos recursos</p>
 
         {error && <div className="error-message">{error}</div>}
 
@@ -104,6 +101,8 @@ export default function Login() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
+        
+        <div className="checkered-bottom"></div>
       </div>
     </div>
   );

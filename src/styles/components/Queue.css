@@ -240,3 +240,67 @@
 .missed-button:hover {
   background: #b91c1c;
 }
+
+@media (max-width: 768px) {
+  .queue-container {
+    padding: 0 1rem;
+  }
+  
+  .queues-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .player-selector select {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .queue-controls {
+    gap: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .queue-container {
+    padding: 0 0.5rem;
+  }
+  
+  .queue-card {
+    padding: 1rem;
+    margin: 0;
+  }
+  
+  .queue-card h3 {
+    font-size: 1.2rem;
+  }
+
+  .queue-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .add-button {
+    padding: 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .queue-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.8rem;
+  }
+  
+  .item-controls {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .remove-button,
+  .confirm-button,
+  .missed-button {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}

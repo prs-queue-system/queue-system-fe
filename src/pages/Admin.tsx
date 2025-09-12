@@ -5,6 +5,7 @@ import Queue from "../components/Queue";
 import Simulators from "../components/Simulators";
 import UserManagement from "../components/UserManagement";
 import TimePatterns from "../components/TimePatterns";
+import "../styles/pages/Admin.css";
 
 export default function Admin() {
   const [user, setUser] = useState<any>(null);
@@ -42,42 +43,13 @@ export default function Admin() {
   if (!user) return <div>Carregando...</div>;
 
   return (
-    <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "1rem",
-          marginBottom: "2rem",
-        }}
-      >
-        <div
-          style={{
-            width: "300px",
-            height: "82px",
-            backgroundImage:
-              'url("https://loja.prsim.com.br/wp-content/uploads/2025/04/prs-preto-branco-vermelho-300x82.png")',
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        ></div>
-        <h1 className="app-title" style={{ margin: 0, flex: 1 }}>
-          Sistema de Filas e Simuladores - {user.role}
-        </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <span style={{ color: "white" }}>Olá, {user.name}</span>
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: "0.5rem 1rem",
-              background: "#dc2626",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-          >
+    <div className="admin-container">
+      <div className="admin-header">
+        <div className="admin-logo"></div>
+        <h1 className="app-title">Sistema de Filas e Simuladores - {user.role}</h1>
+        <div className="user-info">
+          <span>Olá, {user.name}</span>
+          <button onClick={handleLogout} className="logout-button">
             Sair
           </button>
         </div>
@@ -103,6 +75,6 @@ export default function Admin() {
       <div className="section">
         <Simulators />
       </div>
-    </>
+    </div>
   );
 }

@@ -70,7 +70,17 @@ export default function Register() {
   return (
     <div className="register-container">
       <div className="register-card">
-        <h1>Registro de Jogador</h1>
+        <div className="checkered-flag"></div>
+        <div className="speed-lines"></div>
+        
+        <div className="logo-container">
+          <div className="formula-logo">
+            <h2>FORMULA MAX</h2>
+          </div>
+          <div className="formula-stars">★ ★ ★ ★ ★</div>
+        </div>
+        
+        <h1>Novo Cadastro</h1>
         
         {success && (
           <div className="success-message">
@@ -132,6 +142,8 @@ export default function Register() {
             {loading ? 'Registrando...' : 'Registrar'}
           </button>
         </form>
+        
+        <div className="racing-stripes"></div>
       </div>
     </div>
   );

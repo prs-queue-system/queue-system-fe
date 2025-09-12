@@ -232,6 +232,7 @@
   .modal-content {
     width: 95%;
     max-height: 90vh;
+    margin: 0.5rem;
   }
   
   .modal-header {
@@ -245,10 +246,56 @@
   .cars-grid,
   .tracks-grid {
     grid-template-columns: 1fr;
+    gap: 0.8rem;
   }
   
   .modal-header h3 {
     font-size: 1.25rem;
+  }
+  
+  .search-input {
+    padding: 0.8rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-content {
+    width: 98%;
+    max-height: 95vh;
+    margin: 0.25rem;
+    border-radius: 8px;
+  }
+  
+  .modal-header {
+    padding: 0.8rem;
+  }
+  
+  .modal-body {
+    padding: 0.8rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .car-item,
+  .track-item {
+    padding: 0.8rem;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+  
+  .car-icon,
+  .track-icon {
+    font-size: 1.5rem;
+    align-self: center;
+  }
+  
+  .search-input {
+    padding: 0.7rem;
+    font-size: 0.85rem;
   }
 }
 

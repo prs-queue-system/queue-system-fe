@@ -268,7 +268,7 @@ export default function Seller() {
   }, []);
 
   const filteredPlayers = useMemo(() => {
-    if (!searchTerm.trim()) return [];
+    if (!searchTerm.trim()) return players;
     return players.filter((player) =>
       player.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -555,31 +555,29 @@ export default function Seller() {
           className="search-input"
         />
 
-        {searchTerm && (
-          <div className="players-grid">
-            {filteredPlayers.map((player) => (
-              <div key={player.id} className="player-card">
-                <div className="player-info">
-                  <h3>{player.name}</h3>
-                  <p>ID: {player.id}</p>
-                </div>
-                <button
-                  onClick={() => setSelectedPlayer(player)}
-                  className={`select-button ${
-                    selectedPlayer?.id === player.id ? "selected" : ""
-                  }`}
-                >
-                  {selectedPlayer?.id === player.id
-                    ? "Selecionado"
-                    : "Selecionar"}
-                </button>
+        <div className="players-grid">
+          {filteredPlayers.map((player) => (
+            <div key={player.id} className="player-card">
+              <div className="player-info">
+                <h3>{player.name}</h3>
+                <p>ID: {player.id}</p>
               </div>
-            ))}
-            {filteredPlayers.length === 0 && (
-              <p className="no-results">Nenhum jogador encontrado</p>
-            )}
-          </div>
-        )}
+              <button
+                onClick={() => setSelectedPlayer(selectedPlayer?.id === player.id ? null : player)}
+                className={`select-button ${
+                  selectedPlayer?.id === player.id ? "selected" : ""
+                }`}
+              >
+                {selectedPlayer?.id === player.id
+                  ? "Selecionado"
+                  : "Selecionar"}
+              </button>
+            </div>
+          ))}
+          {filteredPlayers.length === 0 && (
+            <p className="no-results">Nenhum jogador encontrado</p>
+          )}
+        </div>
       </div>
 
       {selectedPlayer && (

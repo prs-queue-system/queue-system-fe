@@ -10,6 +10,8 @@ import {
   confirmTurn,
   fetchTimePatterns,
   movePlayer,
+  startAutopilot,
+  stopAutopilot,
   type Player,
   type SimulatorQueue,
 } from "../services/api";
@@ -58,6 +60,20 @@ export default function Queue() {
   const [activeItems, setActiveItems] = useState<
     Record<number, ActiveQueueItem[]>
   >({});
+  const [user, setUser] = useState<any>(null);
+
+  // Load user data from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
 
   const loadAllQueues = useCallback(async () => {
     try {
@@ -386,6 +402,8 @@ export default function Queue() {
         }
       }
 
+
+
       await confirmTurn(queueId);
       await loadAllQueues();
     } catch (err) {
@@ -523,6 +541,65 @@ export default function Queue() {
           const status = queueStatuses[sim.simulatorId];
           return (
             <div key={sim.simulatorId} className="queue-card" style={{ position: "relative" }}>
+              {/* AutoPlay Buttons - Only visible to sellers and above */}
+              {user && (user.role === 'SELLER' || user.role === 'ADMIN' || user.role === 'MASTER') && (
+                <div style={{ 
+                  display: "flex", 
+                  gap: "0.5rem", 
+                  marginBottom: "1rem",
+                  justifyContent: "center"
+                }}>
+                  <button
+                    onClick={async () => {
+                      if (sim.pcIp) {
+                        try {
+                          await startAutopilot(sim.pcIp, sim.id);
+                          alert('AutoPlay iniciado com sucesso!');
+                        } catch (error) {
+                          alert('Erro ao iniciar AutoPlay');
+                          console.error(error);
+                        }
+                      }
+                    }}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      backgroundColor: "#4caf50",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "0.8rem"
+                    }}
+                  >
+                    Inicia AutoPlay
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (sim.pcIp) {
+                        try {
+                          await stopAutopilot(sim.pcIp);
+                          alert('AutoPlay finalizado com sucesso!');
+                        } catch (error) {
+                          alert('Erro ao finalizar AutoPlay');
+                          console.error(error);
+                        }
+                      }
+                    }}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      backgroundColor: "#dc2626",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "0.8rem"
+                    }}
+                  >
+                    Finaliza Autoplay
+                  </button>
+                </div>
+              )}
+              
               {(() => {
                 const currentItem = getCurrentActiveItem(activeItems[sim.simulatorId]);
                 return currentItem && currentItem.status === "CONFIRMED" ? <F1Car isActive={true} /> : null;

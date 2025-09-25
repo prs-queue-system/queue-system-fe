@@ -232,7 +232,8 @@ export async function createQueue(
   playerId: number,
   simulatorId: number,
   timeMinutes?: number,
-  amountPaid?: number
+  amountPaid?: number,
+  reason?: string
 ): Promise<QueueItem> {
   try {
     const token = localStorage.getItem("authToken");
@@ -249,6 +250,7 @@ export async function createQueue(
         simulatorId: validSimulatorId,
         timeMinutes,
         amountPaid,
+        reason,
       }),
     });
     if (!res.ok) throw new Error("Erro ao criar queue");
@@ -277,9 +279,11 @@ export async function fetchAllQueues(): Promise<SimulatorQueue[]> {
     const simulators = await res.json();
 
     return simulators.map(
-      (sim: { id: number; name: string; Queue?: any[] }) => ({
+      (sim: { id: number; name: string; Queue?: any[]; pcIp?: string }) => ({
         simulatorId: sim.id,
         simulatorName: sim.name,
+        id: sim.id, // Add id property for compatibility
+        pcIp: sim.pcIp, // Add pcIp property
         queue: (sim.Queue || [])
           .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
           .map((q: any) => {
@@ -660,6 +664,50 @@ export async function fetchSimulatorContent(pcIp: string): Promise<{ cars: CarCo
     return { cars, tracks };
   } catch {
     throw new Error("Erro ao buscar conteúdo do simulador");
+  }
+}
+
+// AutoPlay API functions
+export async function startAutopilot(simulatorIp: string, simulatorId: number): Promise<void> {
+  try {
+    const res = await fetch(`http://${simulatorIp}:5001/autopilot`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        code: "aa22",
+        simulatorId: simulatorId
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Erro ao iniciar autopilot");
+    }
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Erro ao iniciar autopilot"
+    );
+  }
+}
+
+export async function stopAutopilot(simulatorIp: string): Promise<void> {
+  try {
+    const res = await fetch(`http://${simulatorIp}:5001/kill`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ code: "aa22" }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Erro ao parar autopilot");
+    }
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Erro ao parar autopilot"
+    );
   }
 }
 

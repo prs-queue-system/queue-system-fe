@@ -24,8 +24,9 @@ export type QueueItem = {
 export type SimulatorQueue = {
   simulatorId: number;
   simulatorName: string;
+  id: number; // Add id property for compatibility
+  pcIp?: string; // Add pcIp property
   queue: QueueItem[];
-  pcIp?: string;
 };
 
 export type TimePattern = {

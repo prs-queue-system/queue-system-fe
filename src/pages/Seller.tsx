@@ -9,7 +9,6 @@ import {
   processNext,
   confirmTurn,
   getSellerQRCode,
-  fetchTimePatterns,
   createPlayer,
   movePlayer,
 } from "../services/api";
@@ -39,12 +38,13 @@ const formatTime = (timeLeft: number): string => {
 };
 
 export default function Seller() {
-  const [players, setPlayers] = useState<Player[]>([]);
   const [queues, setQueues] = useState<SimulatorQueue[]>([]);
-  const [timePatterns, setTimePatterns] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [selectedPattern, setSelectedPattern] = useState<any>(null);
+  const [selectedTime, setSelectedTime] = useState<number | null>(null);
+  const [selectedValue, setSelectedValue] = useState<number | null>(null);
+  const [reason, setReason] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [queueStatuses, setQueueStatuses] = useState<
     Record<number, QueueStatus>
@@ -59,6 +59,12 @@ export default function Seller() {
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [registerForm, setRegisterForm] = useState({ name: "", email: "", phone: "" });
   const [registerLoading, setRegisterLoading] = useState(false);
+
+  // Opções fixas de tempo (em minutos)
+  const timeOptions = [5, 7, 10, 15];
+  
+  // Opções fixas de valores (em reais)
+  const valueOptions = [100, 80, 60, 50, 40, 30, 20];
 
   const loadQueues = useCallback(async () => {
     try {
@@ -117,15 +123,6 @@ export default function Seller() {
     }
   }, []);
 
-  const loadTimePatterns = useCallback(async () => {
-    try {
-      const patterns = await fetchTimePatterns();
-      setTimePatterns(patterns || []);
-    } catch (error) {
-      console.error("Error loading time patterns:", error);
-    }
-  }, []);
-
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) {
@@ -147,7 +144,7 @@ export default function Seller() {
 
     const loadData = async () => {
       try {
-        await Promise.all([loadPlayers(), loadQueues(), loadTimePatterns()]);
+        await Promise.all([loadPlayers(), loadQueues()]);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -237,7 +234,7 @@ export default function Seller() {
       if (queueInterval) clearInterval(queueInterval);
       if (playerInterval) clearInterval(playerInterval);
     };
-  }, [loadQueues, loadPlayers, loadTimePatterns]);
+  }, [loadQueues, loadPlayers]);
 
   // Timer to update time remaining every second
   useEffect(() => {
@@ -275,18 +272,27 @@ export default function Seller() {
   }, [players, searchTerm]);
 
   const handleAddToQueue = async (simulatorId: number) => {
-    if (!selectedPlayer || !selectedPattern) return;
+    if (!selectedPlayer || !selectedTime || (selectedValue === null && !reason.trim())) return;
+
+    // Validação: se "Sem valor" foi selecionado (selectedValue === null), o motivo deve estar preenchido
+    if (selectedValue === null && !reason.trim()) {
+      alert("Por favor, preencha o motivo quando selecionar 'Sem valor'");
+      return;
+    }
 
     try {
       await createQueue(
         selectedPlayer.id,
         simulatorId,
-        selectedPattern.timeMinutes,
-        selectedPattern.price
+        selectedTime,
+        selectedValue || 0,
+        selectedValue === null ? reason : undefined
       );
       setSelectedPlayer(null);
       setSearchTerm("");
-      setSelectedPattern(null);
+      setSelectedTime(null);
+      setSelectedValue(null);
+      setReason("");
       await Promise.all([loadQueues(), loadPlayers()]);
     } catch (error) {
       console.error(
@@ -583,49 +589,67 @@ export default function Seller() {
       </div>
 
       {selectedPlayer && (
-        <div className="selected-player">
-          <h3>Jogador Selecionado: {selectedPlayer.name}</h3>
-          <div
-            style={{
-              display: "flex",
-              gap: "1rem",
-              marginTop: "1rem",
-              alignItems: "end",
-              justifyContent: "center",
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "0.5rem",
-                  color: "white",
-                }}
-              >
-                Padrão de Tempo
-              </label>
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}>
-                {timePatterns.map((pattern) => (
+        <div className="selected-player-card">
+          <div className="selected-player-header">
+            <h3>Jogador Selecionado</h3>
+            <div className="player-info">
+              <span className="player-name">{selectedPlayer.name}</span>
+              <span className="player-email">{selectedPlayer.email}</span>
+            </div>
+          </div>
+          
+          <div className="selection-container">
+            {/* Seleção de Tempo */}
+            <div className="selection-group">
+              <label className="selection-label">Tempo (minutos)</label>
+              <div className="options-grid time-options">
+                {timeOptions.map((time) => (
                   <button
-                    key={pattern.id}
-                    onClick={() => setSelectedPattern(pattern)}
-                    style={{
-                      padding: "0.75rem 1rem",
-                      border: `2px solid ${selectedPattern?.id === pattern.id ? "#dc2626" : "#333"}`,
-                      borderRadius: "6px",
-                      background: selectedPattern?.id === pattern.id ? "#dc2626" : "#000",
-                      color: "white",
-                      cursor: "pointer",
-                      transition: "all 0.2s"
-                    }}
+                    key={time}
+                    onClick={() => setSelectedTime(time)}
+                    className={`option-button ${selectedTime === time ? 'selected' : ''}`}
                   >
-                    {pattern.name}<br/>
-                    <small>{pattern.timeMinutes}min - R$ {pattern.price.toFixed(2)}</small>
+                    {time}min
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Seleção de Valor */}
+            <div className="selection-group">
+              <label className="selection-label">Valor</label>
+              <div className="options-grid value-options">
+                {valueOptions.map((value) => (
+                  <button
+                    key={value}
+                    onClick={() => setSelectedValue(value)}
+                    className={`option-button value-button ${selectedValue === value ? 'selected' : ''}`}
+                  >
+                    R$ {value}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setSelectedValue(null)}
+                  className={`option-button no-value-button ${selectedValue === null ? 'selected' : ''}`}
+                >
+                  Sem valor
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* Campo de motivo quando "Sem valor" é selecionado */}
+          {selectedValue === null && (
+            <div className="reason-container">
+              <label className="selection-label">Motivo (obrigatório)</label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Digite o motivo para não cobrar..."
+                className="reason-textarea"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -705,17 +729,17 @@ export default function Seller() {
                 <div className="queue-controls">
                   <button
                     onClick={() => handleAddToQueue(sim.simulatorId)}
-                    disabled={!selectedPlayer || !selectedPattern}
+                    disabled={!selectedPlayer || !selectedTime || (selectedValue === null && !reason.trim())}
                     style={{
                       width: "100%",
                       padding: "1rem 2rem",
-                      background: !selectedPlayer || !selectedPattern ? "#666" : "#dc2626",
+                      background: (!selectedPlayer || !selectedTime || (selectedValue === null && !reason.trim())) ? "#666" : "#dc2626",
                       color: "white",
                       border: "none",
                       borderRadius: "8px",
                       fontSize: "1.1rem",
                       fontWeight: "bold",
-                      cursor: !selectedPlayer || !selectedPattern ? "not-allowed" : "pointer",
+                      cursor: (!selectedPlayer || !selectedTime || (selectedValue === null && !reason.trim())) ? "not-allowed" : "pointer",
                       transition: "all 0.2s ease"
                     }}
                   >

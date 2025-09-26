@@ -692,3 +692,111 @@
     margin: 0.5rem;
   }
 }
+
+/* Animated Close Button */
+.animated-close-button {
+  width: 50px;
+  height: 50px;
+  position: relative;
+  background-color: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 25px;
+  opacity: 1;
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  cursor: pointer;
+  box-shadow: 0px 0px 15px 0px rgba(220, 38, 38, 0.3);
+}
+
+.animated-close-button:hover {
+  border-color: #dc2626;
+  box-shadow: 0px 0px 20px 0px rgba(220, 38, 38, 0.5);
+}
+button.animated-close-button{
+  background: none !important;
+}
+.animated-close-button > span {
+  background-color: #dc2626;
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  position: absolute;
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  width: 26px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.animated-close-button > span span {
+  display: block;
+  background-color: #b91c1c;
+  width: 3px;
+  height: 3px;
+  border-radius: 2px;
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.animated-close-button > span.close-left {
+  transform: translateX(-50%) translateY(-50%) rotate(45deg);
+  transform-origin: center;
+}
+
+.animated-close-button > span.close-left .circle-left {
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  margin-left: 0;
+}
+
+.animated-close-button > span.close-left .circle-right {
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  margin-left: 23px;
+}
+
+.animated-close-button > span.close-right {
+  transform: translateX(-50%) translateY(-50%) rotate(-45deg);
+  transform-origin: center;
+}
+
+.animated-close-button > span.close-right .circle-left {
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  margin-left: 0;
+}
+
+.animated-close-button > span.close-right .circle-right {
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  margin-left: 23px;
+}
+
+.animated-close-button:hover > span {
+  background-color: #ef4444;
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.animated-close-button:hover > span span {
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  background-color: #dc2626;
+}
+
+.animated-close-button:hover > span.close-left .circle-left {
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  margin-left: 23px;
+}
+
+.animated-close-button:hover > span.close-left .circle-right {
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  margin-left: 0;
+}
+
+.animated-close-button:hover > span.close-right .circle-left {
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  margin-left: 23px;
+}
+
+.animated-close-button:hover > span.close-right .circle-right {
+  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+  margin-left: 0;
+}

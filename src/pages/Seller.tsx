@@ -11,6 +11,8 @@ import {
   getSellerQRCode,
   createPlayer,
   movePlayer,
+  startAutopilot,
+  stopAutopilot,
 } from "../services/api";
 import type { Player, SimulatorQueue } from "../types";
 import "../styles/pages/Seller.css";
@@ -59,6 +61,7 @@ export default function Seller() {
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [registerForm, setRegisterForm] = useState({ name: "", email: "", phone: "" });
   const [registerLoading, setRegisterLoading] = useState(false);
+  const [showTimeValueSelection, setShowTimeValueSelection] = useState(false);
 
   // Opções fixas de tempo (em minutos)
   const timeOptions = [5, 7, 10, 15];
@@ -293,6 +296,7 @@ export default function Seller() {
       setSelectedTime(null);
       setSelectedValue(null);
       setReason("");
+      setShowTimeValueSelection(false);
       await Promise.all([loadQueues(), loadPlayers()]);
     } catch (error) {
       console.error(
@@ -561,7 +565,7 @@ export default function Seller() {
           className="search-input"
         />
 
-        {searchTerm && (
+        {searchTerm && !showTimeValueSelection && (
           <div className="players-grid">
             {filteredPlayers.map((player) => (
               <div key={player.id} className="player-card">
@@ -570,7 +574,10 @@ export default function Seller() {
                   <p>ID: {player.id}</p>
                 </div>
                 <button
-                  onClick={() => setSelectedPlayer(player)}
+                  onClick={() => {
+                    setSelectedPlayer(player);
+                    setShowTimeValueSelection(true);
+                  }}
                   className={`select-button ${
                     selectedPlayer?.id === player.id ? "selected" : ""
                   }`}
@@ -586,9 +593,96 @@ export default function Seller() {
             )}
           </div>
         )}
+
+        {showTimeValueSelection && selectedPlayer && (
+          <div className="selected-player-card">
+            <div className="selected-player-header">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3>Jogador Selecionado</h3>
+                <button
+                  onClick={() => {
+                    setShowTimeValueSelection(false);
+                    setSelectedPlayer(null);
+                    setSelectedTime(null);
+                    setSelectedValue(null);
+                    setReason("");
+                  }}
+                  className="animated-close-button"
+                  title="Fechar"
+                >
+                  <span className="close-left">
+                    <span className="circle-left"></span>
+                    <span className="circle-right"></span>
+                  </span>
+                  <span className="close-right">
+                    <span className="circle-left"></span>
+                    <span className="circle-right"></span>
+                  </span>
+                </button>
+              </div>
+              <div className="player-info">
+                <span className="player-name">{selectedPlayer.name}</span>
+                <span className="player-email">{selectedPlayer.email}</span>
+              </div>
+            </div>
+            
+            <div className="selection-container">
+              {/* Seleção de Tempo */}
+              <div className="selection-group">
+                <label className="selection-label">Tempo (minutos)</label>
+                <div className="options-grid time-options">
+                  {timeOptions.map((time) => (
+                    <button
+                      key={time}
+                      onClick={() => setSelectedTime(time)}
+                      className={`option-button ${selectedTime === time ? 'selected' : ''}`}
+                    >
+                      {time}min
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Seleção de Valor */}
+              <div className="selection-group">
+                <label className="selection-label">Valor</label>
+                <div className="options-grid value-options">
+                  {valueOptions.map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => setSelectedValue(value)}
+                      className={`option-button value-button ${selectedValue === value ? 'selected' : ''}`}
+                    >
+                      R$ {value}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setSelectedValue(null)}
+                    className={`option-button no-value-button ${selectedValue === null ? 'selected' : ''}`}
+                  >
+                    Sem valor
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Campo de motivo quando "Sem valor" é selecionado */}
+            {selectedValue === null && (
+              <div className="reason-container">
+                <label className="selection-label">Motivo (obrigatório)</label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Digite o motivo para não cobrar..."
+                  className="reason-textarea"
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {selectedPlayer && (
+      {selectedPlayer && !showTimeValueSelection && (
         <div className="selected-player-card">
           <div className="selected-player-header">
             <h3>Jogador Selecionado</h3>
@@ -723,6 +817,65 @@ export default function Seller() {
                         </p>
                       );
                     })()}
+                  </div>
+                )}
+
+                {/* AutoPlay Buttons - Only visible to sellers and above */}
+                {user && (user.role === 'SELLER' || user.role === 'ADMIN' || user.role === 'MASTER') && (
+                  <div style={{ 
+                    display: "flex", 
+                    gap: "0.5rem", 
+                    marginBottom: "1rem",
+                    justifyContent: "center"
+                  }}>
+                    <button
+                      onClick={async () => {
+                        if (sim.pcIp) {
+                          try {
+                            await startAutopilot(sim.pcIp, sim.id);
+                            alert('AutoPlay iniciado com sucesso!');
+                          } catch (error) {
+                            alert('Erro ao iniciar AutoPlay');
+                            console.error(error);
+                          }
+                        }
+                      }}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        backgroundColor: "#4caf50",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "0.8rem"
+                      }}
+                    >
+                      Inicia AutoPlay
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (sim.pcIp) {
+                          try {
+                            await stopAutopilot(sim.pcIp);
+                            alert('AutoPlay parado com sucesso!');
+                          } catch (error) {
+                            alert('Erro ao parar AutoPlay');
+                            console.error(error);
+                          }
+                        }
+                      }}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        backgroundColor: "#f44336",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "0.8rem"
+                      }}
+                    >
+                      Para AutoPlay
+                    </button>
                   </div>
                 )}
 

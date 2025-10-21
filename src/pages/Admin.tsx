@@ -4,7 +4,7 @@ import Player from "../components/Player";
 import Queue from "../components/Queue";
 import Simulators from "../components/Simulators";
 import UserManagement from "../components/UserManagement";
-import TimePatterns from "../components/TimePatterns";
+// import TimePatterns from "../components/TimePatterns";
 import "../styles/pages/Admin.css";
 
 export default function Admin() {
@@ -46,7 +46,7 @@ export default function Admin() {
     <div className="admin-container">
       <div className="admin-header">
         <div className="admin-logo"></div>
-        <h1 className="app-title">Sistema de Filas e Simuladores - {user.role}</h1>
+        <h1 className="app-title">Sistema de filas e simuladores</h1>
         <div className="user-info">
           <span>Olá, {user.name}</span>
           <button onClick={handleLogout} className="logout-button">
@@ -60,9 +60,9 @@ export default function Admin() {
           <div className="section">
             <UserManagement userRole={user.role} />
           </div>
-          <div className="section">
+          {/* <div className="section">
             <TimePatterns />
-          </div>
+          </div> */}
         </>
       )}
 

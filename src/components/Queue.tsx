@@ -553,7 +553,7 @@ export default function Queue() {
                     onClick={async () => {
                       if (sim.pcIp) {
                         try {
-                          await startAutopilot(sim.pcIp, sim.id);
+                          await startAutopilot(sim.pcIp);
                           alert('AutoPlay iniciado com sucesso!');
                         } catch (error) {
                           alert('Erro ao iniciar AutoPlay');

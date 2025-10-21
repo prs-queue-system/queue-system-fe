@@ -339,17 +339,103 @@ export async function getQueueStatus(simulatorId: number) {
   }
 }
 
+/**
+ * Fetches a specific simulator by ID to get its pcIp
+ */
+export async function getSimulatorById(simulatorId: number): Promise<{ id: number; name: string; pcIp?: string } | null> {
+  try {
+    const validId = validateId(simulatorId);
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/simulators`);
+    if (!res.ok) throw new Error("Erro ao buscar simuladores");
+    const simulators = await res.json();
+    
+    const simulator = simulators.find((sim: any) => sim.id === validId);
+    return simulator || null;
+  } catch {
+    throw new Error("Erro ao buscar simulador");
+  }
+}
+
 export async function processNext(simulatorId: number) {
   try {
     const validId = validateId(simulatorId);
+    console.log('🔄 ProcessNext called for simulator:', validId);
+    
+    // Get simulator info to obtain pcIp
+    const simulator = await getSimulatorById(validId);
+    console.log('🖥️ Simulator info:', simulator);
+    
+    // Check if there's an active session before processing next
+    const queueStatusResponse = await getQueueStatus(validId);
+    console.log('📊 Queue status response:', queueStatusResponse);
+    
+    // Extract the data array from the response
+    const queueData = queueStatusResponse.data || queueStatusResponse;
+    console.log('📋 Queue data array:', queueData);
+    
+    const activePlayer = queueData.find((item: any) => item.status === 'CONFIRMED');
+    console.log('🎮 Active player found:', activePlayer);
+    
+    // If there's an active/confirmed player, send kill request to Python app
+    if (activePlayer) {
+      console.log('🚨 Sending kill request for active player:', activePlayer.player?.name);
+      try {
+        // Pass simulator pcIp to sendKillRequest
+        await sendKillRequest(simulator?.pcIp);
+        console.log('✅ Kill request sent successfully to Python application');
+      } catch (killError) {
+        console.warn('❌ Failed to send kill request to Python application:', killError);
+        // Continue with processing next even if kill request fails
+      }
+    } else {
+      console.log('ℹ️ No active player found, skipping kill request');
+    }
+    
     const res = await fetch(
       `${ApiConfig.getBaseUrl()}/timed-queue/${validId}/next`,
       { method: "POST" }
     );
     if (!res.ok) throw new Error("Erro ao processar próximo jogador");
     return res.json();
-  } catch {
+  } catch (error) {
+    console.error('❌ Error in processNext:', error);
     throw new Error("Erro ao processar próximo jogador");
+  }
+}
+
+/**
+ * Sends a kill request to the Python application on port 5001
+ */
+export async function sendKillRequest(simulatorIp?: string) {
+  console.log('🔫 SendKillRequest function called with simulatorIp:', simulatorIp);
+  try {
+    const killUrl = simulatorIp ? `http://${simulatorIp}:5001/kill` : 'http://localhost:5001/kill';
+    console.log('📡 Sending POST request to', killUrl);
+    const res = await fetch(killUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        code: "aa22",
+        simulatorId: simulatorIp 
+      }),
+      // Add timeout to prevent hanging
+      signal: AbortSignal.timeout(5000)
+    });
+    
+    console.log('📥 Response status:', res.status, res.statusText);
+    
+    if (!res.ok) {
+      throw new Error(`Kill request failed with status: ${res.status}`);
+    }
+    
+    console.log('✅ Kill request completed successfully');
+    // Don't try to parse JSON response, just return success
+    return;
+  } catch (error) {
+    console.error('❌ Error sending kill request to Python app:', error);
+    throw error;
   }
 }
 
@@ -668,7 +754,7 @@ export async function fetchSimulatorContent(pcIp: string): Promise<{ cars: CarCo
 }
 
 // AutoPlay API functions
-export async function startAutopilot(simulatorIp: string, simulatorId: number): Promise<void> {
+export async function startAutopilot(simulatorIp: string): Promise<void> {
   try {
     const res = await fetch(`http://${simulatorIp}:5001/autopilot`, {
       method: "POST",
@@ -677,7 +763,7 @@ export async function startAutopilot(simulatorIp: string, simulatorId: number): 
       },
       body: JSON.stringify({ 
         code: "aa22",
-        simulatorId: simulatorId
+        simulatorId: simulatorIp  // Use simulatorIp as simulatorId
       }),
     });
 
@@ -698,7 +784,10 @@ export async function stopAutopilot(simulatorIp: string): Promise<void> {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ code: "aa22" }),
+      body: JSON.stringify({ 
+        code: "aa22",
+        simulatorId: simulatorIp  // Use simulatorIp as simulatorId
+      }),
     });
 
     if (!res.ok) {
@@ -712,6 +801,28 @@ export async function stopAutopilot(simulatorIp: string): Promise<void> {
 }
 
 // Utility function to clear simulator cache
+export async function fetchUsers() {
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch(`${ApiConfig.getBaseUrl()}/auth/users`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    
+    if (!res.ok) {
+      throw new Error("Erro ao buscar usuários");
+    }
+    
+    const data = await res.json();
+    return data.data;
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Erro ao buscar usuários"
+    );
+  }
+}
+
 export function clearSimulatorCache(pcIp?: string): void {
   if (pcIp) {
     localStorage.removeItem(`simulator_cars_${pcIp}`);

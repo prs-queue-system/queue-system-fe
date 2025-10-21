@@ -136,8 +136,10 @@ img, video, iframe {
 }
 
 /* Fix for very long text */
-word-wrap: break-word;
-overflow-wrap: break-word;
-hyphens: auto;
+* {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
 
 

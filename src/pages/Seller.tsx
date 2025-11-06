@@ -270,7 +270,8 @@ export default function Seller() {
   const filteredPlayers = useMemo(() => {
     if (!searchTerm.trim()) return [];
     return players.filter((player) =>
-      player.name.toLowerCase().includes(searchTerm.toLowerCase())
+      player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      player.id.toString().includes(searchTerm)
     );
   }, [players, searchTerm]);
 
@@ -559,7 +560,7 @@ export default function Seller() {
 
         <input
           type="text"
-          placeholder="Digite o nome do jogador..."
+          placeholder="Digite o nome ou ID do jogador..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="search-input"
